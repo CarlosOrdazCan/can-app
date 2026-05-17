@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Estadísticas | C.A.N.</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        :root { --primary: #ff1a1a; }
+        body.kids-theme { --primary: #00d2ff; }
+        
+        .stat-row {
+            display: flex; align-items: center; gap: 20px; margin-bottom: 25px;
+            background: rgba(255,255,255,0.03); padding: 25px; border-radius: 20px; 
+            border: 1px solid var(--border); transition: 0.3s;
+        }
+        .stat-row:hover { border-color: var(--primary); transform: translateX(10px); }
+
+        /* Contenedor de la barra */
+        .bar-container { 
+            flex: 1; background: rgba(0,0,0,0.4); height: 14px; 
+            border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        /* Animación de la barra */
+        .bar-fill { 
+            height: 100%; background: var(--primary); width: 0%; 
+            transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        .count-badge { 
+            background: var(--primary); color: white; padding: 8px 20px; 
+            border-radius: 12px; font-weight: 900; font-size: 14px; 
+            min-width: 120px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .song-info { width: 280px; }
+        .song-name { font-weight: 800; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; margin: 0; }
+        .song-artist { font-size: 11px; color: var(--text-dim); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+    <script>
+        // SEGURIDAD: Solo Full Administrador puede estar aquí
+        const token = localStorage.getItem("token");
+        const userData = JSON.parse(window.atob(token.split('.')[1]));
+        if(userData.role !== "Full Administrador") window.location.replace("index.html");
+
+        const activeMin = localStorage.getItem("activeMinistry") || "Principal";
+        if(activeMin === "KIDS") document.body.classList.add("kids-theme");
+    </script>
+
+    <div class="container animate-epic">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:60px;">
+            <div style="display:flex; align-items:center; gap:20px;">
+                <button class="secondary" onclick="location.href='index.html'" style="padding:12px 20px;">←</button>
+                <h1 style="margin:0; letter-spacing:4px; font-weight:900;">ESTADÍSTICAS</h1>
+            </div>
+            <div id="min-indicator" class="section-badge" style="margin:0; font-size:12px; padding:10px 25px;">...</div>
+        </header>
+
+        <div class="glass-card">
+            <div style="margin-bottom:40px;">
+                <h2 style="margin:0; letter-spacing:2px; font-size:28px;">REPETICIÓN DE REPERTORIO</h2>
+                <p style="color:var(--text-dim); margin-top:10px; font-size:14px;">Frecuencia de canciones en servicios archivados de este ministerio.</p>
+            </div>
+
+            <div id="stats-list">
+                <p style="color:gray; text-align:center; padding:40px;">Analizando historial...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("min-indicator").innerHTML = activeMin === "KIDS" ? `KIDS 👶` : "PRINCIPAL";
+
+        async function loadStats() {
+            try {
+                const res = await fetch(`/setlists?ministry=${activeMin}`);
+                const setlists = await res.json();
+                
+                // Solo tomamos en cuenta los que ya pasaron (archivados)
+                const archivedSets = setlists.filter(s => s.archived);
+
+                if(archivedSets.length === 0) {
+                    document.getElementById("stats-list").innerHTML = `
+                        <div style="text-align:center; padding:60px; color:var(--text-dim);">
+                            <span style="font-size:50px; display:block; margin-bottom:20px;">📦</span>
+                            <p>No hay suficientes servicios archivados para generar métricas.</p>
+                            <p style="font-size:12px; margin-top:10px;">Archiva servicios pasados en la sección de Setlists para ver datos aquí.</p>
+                        </div>`;
+                    return;
+                }
+
+                let songMap = {}; // Guardaremos { nombre: { count: X, artist: Y } }
+                
+                archivedSets.forEach(set => {
+                    set.songs.forEach(item => {
+                        if(item.songId) {
+                            const name = item.songId.name;
+                            if(!songMap[name]) {
+                                songMap[name] = { count: 0, artist: item.songId.artist };
+                            }
+                            songMap[name].count++;
+                        }
+                    });
+                });
+
+                // Ordenar por las más tocadas (Top 10)
+                const sorted = Object.entries(songMap)
+                    .sort((a, b) => b[1].count - a[1].count)
+                    .slice(0, 10);
+
+                const maxVal = sorted[0][1].count;
+
+                document.getElementById("stats-list").innerHTML = sorted.map(s => {
+                    const name = s[0];
+                    const count = s[1].count;
+                    const artist = s[1].artist;
+                    const percentage = (count / maxVal) * 100;
+
+                    return `
+                        <div class="stat-row">
+                            <div class="song-info">
+                                <h4 class="song-name">${name}</h4>
+                                <p class="song-artist">${artist}</p>
+                            </div>
+                            <div class="bar-container">
+                                <div class="bar-fill" data-width="${percentage}"></div>
+                            </div>
+                            <div class="count-badge">${count} ${count === 1 ? 'VEZ' : 'VECES'}</div>
+                        </div>
+                    `;
+                }).join("");
+
+                // Activar la animación de las barras después de un breve delay
+                setTimeout(() => {
+                    document.querySelectorAll('.bar-fill').forEach(bar => {
+                        bar.style.width = bar.getAttribute('data-width') + '%';
+                    });
+                }, 100);
+
+            } catch (e) {
+                console.error("Error en stats:", e);
+                document.getElementById("stats-list").innerHTML = "<p style='color:red;'>Error al conectar con la base de datos.</p>";
+            }
+        }
+        
+        loadStats();
+    </script>
+</body>
+</html>

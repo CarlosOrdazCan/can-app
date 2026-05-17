@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Planificador | C.A.N.</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        :root { --set-accent: #ff0055; --chart-accent: #00d2ff; }
+        body { background: #050505; }
+        .layout { display: grid; grid-template-columns: 300px 1fr; gap: 30px; margin-top: 30px; height: calc(100vh - 120px); }
+        
+        /* PANEL IZQUIERDO: LISTA DE SETLISTS */
+        .list-panel { background: #0a0a0c; border: 1px solid #222; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; }
+        .set-card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
+        .set-card:hover { border-color: var(--set-accent); transform: translateX(5px); }
+        .set-card.active { background: rgba(255, 0, 85, 0.1); border-color: var(--set-accent); border-left: 4px solid var(--set-accent); }
+        .set-title { font-weight: 900; color: white; font-size: 14px; text-transform: uppercase; }
+        .set-date { font-size: 11px; color: gray; margin-top: 5px; }
+
+        /* PANEL DERECHO: CONSTRUCTOR */
+        .editor-panel { background: #0a0a0c; border: 1px solid #222; border-radius: 20px; padding: 30px; overflow-y: auto; display: none; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .input-box { background: #111; border: 1px solid #333; color: white; padding: 12px; border-radius: 10px; width: 100%; outline: none; box-sizing: border-box; }
+        .input-box:focus { border-color: var(--set-accent); }
+        
+        .section-title { color: var(--set-accent); font-size: 12px; font-weight: bold; letter-spacing: 2px; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 30px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* CREADOR DE BANDA Y CANCIONES */
+        .item-row { display: flex; gap: 10px; align-items: center; background: #111; padding: 10px 15px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #222; }
+        .item-name { flex-grow: 1; color: white; font-weight: bold; font-size: 13px; }
+        .item-input { background: #050505; border: 1px solid #333; color: var(--chart-accent); padding: 6px 10px; border-radius: 6px; width: 100px; font-size: 12px; text-align: center; font-weight: bold; outline: none; }
+        .btn-icon { background: #222; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+        .btn-icon:hover { background: #333; }
+        .btn-preview { background: rgba(0, 210, 255, 0.1); color: var(--chart-accent); border: 1px solid var(--chart-accent); }
+        .btn-preview:hover { background: var(--chart-accent); color: black; }
+        .btn-del { color: #ff1a1a; background: transparent; }
+
+        .search-area { position: relative; margin-bottom: 15px; }
+        .search-results { position: absolute; top: 100%; left: 0; width: 100%; background: #111; border: 1px solid var(--set-accent); border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .res-item { padding: 12px 15px; border-bottom: 1px solid #222; cursor: pointer; color: white; font-size: 13px; font-weight: bold; display: flex; justify-content: space-between; }
+        .res-item:hover { background: var(--set-accent); }
+
+        /* MODAL PREVIEW DEL CHART (HYBRID ENGINE) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; }
+        .m-content { background: #050505; padding: 40px; border-radius: 20px; width: 700px; max-height: 90vh; overflow-y: auto; border: 1px solid var(--chart-accent); position: relative; }
+        .close-modal { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: white; font-size: 24px; cursor: pointer; }
+        
+        .c-title { font-size: 28px; font-weight: 900; color: white; margin: 0 0 5px 0; text-transform: uppercase; }
+        .c-meta { font-size: 12px; color: gray; margin-bottom: 30px; font-family: monospace; }
+        
+        .song-section { margin-bottom: 35px; }
+        .sec-name { background: #111; color: white; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 15px; border-left: 3px solid var(--chart-accent); }
+        .chart-lyric { white-space: pre-wrap; font-size: 16px; line-height: 2.8; color: #ddd; font-family: sans-serif; }
+        .c-chord { position: relative; display: inline-block; }
+        .c-chord span { position: absolute; bottom: 90%; left: 0; color: var(--chart-accent); font-weight: 900; font-family: monospace; font-size: 14px; text-shadow: 0 0 8px rgba(0,210,255,0.2); transform: translateY(5px); }
+        .old-chords { color: var(--chart-accent); font-family: monospace; font-weight: bold; margin-bottom: 5px; font-size: 14px; background: rgba(0, 210, 255, 0.05); padding: 8px 15px; border-radius: 8px; display: inline-block; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container animate-up">
+        <header style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; align-items:center; gap:20px;">
+                <button class="secondary" onclick="location.href='index.html'" style="font-size:11px;">← VOLVER</button>
+                <h1 style="margin:0; font-weight:900; letter-spacing:2px; color:white;">PLANIFICADOR</h1>
+            </div>
+            <button onclick="createNew()" style="background:var(--set-accent); color:white; border:none; padding:12px 25px; border-radius:12px; font-weight:900; cursor:pointer;">+ NUEVO SETLIST</button>
+        </header>
+
+        <div class="layout">
+            <div class="list-panel">
+                <div id="setlistContainer" style="overflow-y:auto; flex-grow:1;"></div>
+            </div>
+
+            <div class="editor-panel" id="editorPanel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2 id="eTitle" style="margin:0; color:white; font-weight:900;">NUEVO SETLIST</h2>
+                    <div>
+                        <button id="btnDelete" onclick="deleteSetlist()" style="background:transparent; border:1px solid #ff1a1a; color:#ff1a1a; padding:10px 15px; border-radius:8px; font-weight:bold; cursor:pointer; display:none; margin-right:10px;">🗑️ ELIMINAR</button>
+                        <button onclick="saveSetlist()" style="background:var(--set-accent); color:white; border:none; padding:10px 25px; border-radius:8px; font-weight:900; cursor:pointer;">💾 GUARDAR</button>
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div>
+                        <label style="font-size:10px; color:gray; font-weight:bold;">NOMBRE DEL EVENTO</label>
+                        <input type="text" id="sName" class="input-box" placeholder="Ej: Domingo Familiar">
+                    </div>
+                    <div>
+                        <label style="font-size:10px; color:gray; font-weight:bold;">FECHA</label>
+                        <input type="date" id="sDate" class="input-box">
+                    </div>
+                    <div>
+                        <label style="font-size:10px; color:gray; font-weight:bold;">HORARIOS (Separados por coma)</label>
+                        <input type="text" id="sTimes" class="input-box" placeholder="Ej: 9:00, 11:30, 1:30">
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <span>🎵 REPERTORIO DEL SERVICIO</span>
+                </div>
+                
+                <div class="search-area">
+                    <input type="text" id="songSearch" class="input-box" placeholder="🔍 Buscar canción para añadir..." oninput="searchSongs()" autocomplete="off">
+                    <div id="songResults" class="search-results"></div>
+                </div>
+                <div id="currentSongs"></div>
+
+                <div class="section-title">
+                    <span>👥 ALINEACIÓN DE BANDA</span>
+                </div>
+                
+                <div class="search-area">
+                    <input type="text" id="userSearch" class="input-box" placeholder="🔍 Buscar músico para añadir..." oninput="searchUsers()" autocomplete="off">
+                    <div id="userResults" class="search-results"></div>
+                </div>
+                <div id="currentTeam"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="chartModal" class="modal">
+        <div class="m-content">
+            <button class="close-modal" onclick="closePreview()">✕</button>
+            <div id="previewHeader"></div>
+            <div id="previewRenderArea" style="margin-top:20px;"></div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem("token");
+        if (!token) window.location.href = "login.html";
+
+        let allSetlists = [];
+        let allSongs = [];
+        let allUsers = [];
+        
+        let currentSetId = null;
+        let activeSongs = []; // { songId: obj, setlistKey: string }
+        let activeTeam = [];  // { memberId, name, role }
+
+        async function init() {
+            try {
+                const [setRes, songRes, userRes] = await Promise.all([
+                    fetch("/setlists", { headers: { "Authorization": `Bearer ${token}` } }),
+                    fetch("/songs", { headers: { "Authorization": `Bearer ${token}` } }),
+                    fetch("/users", { headers: { "Authorization": `Bearer ${token}` } })
+                ]);
+                
+                allSetlists = await setRes.json();
+                allSongs = await songRes.json();
+                allUsers = await userRes.json();
+
+                // Filtrar solo músicos para el buscador de banda
+                allUsers = allUsers.filter(u => u.ministry !== "Produccion");
+
+                renderSetlists();
+            } catch (err) { alert("Error cargando los datos."); }
+        }
+
+        function renderSetlists() {
+            const container = document.getElementById("setlistContainer");
+            allSetlists.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            container.innerHTML = allSetlists.map(s => `
+                <div class="set-card ${currentSetId === s._id ? 'active' : ''}" onclick="loadEditor('${s._id}')">
+                    <div class="set-title">${s.name}</div>
+                    <div class="set-date">📅 ${s.date} | ⏱️ ${s.timeSlots.join(', ')}</div>
+                </div>
+            `).join('') || "<p style='color:gray; font-size:12px; text-align:center;'>No hay setlists creados.</p>";
+        }
+
+        function createNew() {
+            currentSetId = null;
+            activeSongs = [];
+            activeTeam = [];
+            document.getElementById("eTitle").innerText = "NUEVO SETLIST";
+            document.getElementById("sName").value = "";
+            document.getElementById("sDate").value = "";
+            document.getElementById("sTimes").value = "9:00, 11:30";
+            document.getElementById("btnDelete").style.display = "none";
+            document.getElementById("editorPanel").style.display = "block";
+            
+            renderSetlists();
+            renderActiveSongs();
+            renderActiveTeam();
+        }
+
+        function loadEditor(id) {
+            currentSetId = id;
+            const setlist = allSetlists.find(s => s._id === id);
+            
+            document.getElementById("eTitle").innerText = "EDITANDO: " + setlist.name.toUpperCase();
+            document.getElementById("sName").value = setlist.name;
+            document.getElementById("sDate").value = setlist.date;
+            document.getElementById("sTimes").value = setlist.timeSlots.join(', ');
+            
+            // Cargar arreglos
+            activeSongs = setlist.songs.map(item => ({ songId: item.songId, setlistKey: item.setlistKey || item.songId.key }));
+            activeTeam = setlist.team || [];
+
+            document.getElementById("btnDelete").style.display = "block";
+            document.getElementById("editorPanel").style.display = "block";
+            
+            renderSetlists();
+            renderActiveSongs();
+            renderActiveTeam();
+        }
+
+        // --- MANEJO DE CANCIONES ---
+        function searchSongs() {
+            const query = document.getElementById("songSearch").value.toLowerCase();
+            const resBox = document.getElementById("songResults");
+            if (query.length < 2) { resBox.style.display = "none"; return; }
+            
+            const filtered = allSongs.filter(s => s.name.toLowerCase().includes(query) || s.artist.toLowerCase().includes(query));
+            resBox.innerHTML = filtered.map(s => `
+                <div class="res-item" onclick="addSong('${s._id}')">
+                    <span>${s.name}</span> <span style="color:gray; font-size:10px;">${s.key || '-'}</span>
+                </div>
+            `).join('');
+            resBox.style.display = "block";
+        }
+
+        function addSong(id) {
+            const song = allSongs.find(s => s._id === id);
+            activeSongs.push({ songId: song, setlistKey: song.key });
+            document.getElementById("songSearch").value = "";
+            document.getElementById("songResults").style.display = "none";
+            renderActiveSongs();
+        }
+
+        function renderActiveSongs() {
+            const container = document.getElementById("currentSongs");
+            container.innerHTML = activeSongs.map((item, index) => `
+                <div class="item-row">
+                    <div class="item-name">${index + 1}. ${item.songId.name}</div>
+                    <input type="text" class="item-input" value="${item.setlistKey}" placeholder="Tono" onchange="activeSongs[${index}].setlistKey = this.value" title="Cambiar Tono para este domingo">
+                    <button class="btn-icon btn-preview" onclick="previewChart('${item.songId._id}', '${item.setlistKey}')">📊 VER CHART</button>
+                    <button class="btn-icon btn-del" onclick="activeSongs.splice(${index}, 1); renderActiveSongs();">✕</button>
+                </div>
+            `).join('') || "<p style='color:gray; font-size:11px; font-style:italic;'>Aún no hay canciones en la escaleta.</p>";
+        }
+
+        // --- MANEJO DE EQUIPO ---
+        function searchUsers() {
+            const query = document.getElementById("userSearch").value.toLowerCase();
+            const resBox = document.getElementById("userResults");
+            if (query.length < 2) { resBox.style.display = "none"; return; }
+            
+            const filtered = allUsers.filter(u => u.name.toLowerCase().includes(query));
+            resBox.innerHTML = filtered.map(u => `
+                <div class="res-item" onclick="addTeam('${u._id}', '${u.name}', '${u.instrument}')">
+                    <span>${u.name}</span> <span style="color:gray; font-size:10px;">${u.instrument || ''}</span>
+                </div>
+            `).join('');
+            resBox.style.display = "block";
+        }
+
+        function addTeam(id, name, role) {
+            activeTeam.push({ memberId: id, name: name, role: role || "Músico" });
+            document.getElementById("userSearch").value = "";
+            document.getElementById("userResults").style.display = "none";
+            renderActiveTeam();
+        }
+
+        function renderActiveTeam() {
+            const container = document.getElementById("currentTeam");
+            container.innerHTML = activeTeam.map((item, index) => `
+                <div class="item-row">
+                    <div class="item-name">${item.name}</div>
+                    <input type="text" class="item-input" style="width:150px; color:#fff;" value="${item.role}" placeholder="Instrumento" onchange="activeTeam[${index}].role = this.value">
+                    <button class="btn-icon btn-del" onclick="activeTeam.splice(${index}, 1); renderActiveTeam();">✕</button>
+                </div>
+            `).join('') || "<p style='color:gray; font-size:11px; font-style:italic;'>Aún no hay músicos asignados.</p>";
+        }
+
+        // --- EL MOTOR HÍBRIDO DE CHART PREVIEW ---
+        function previewChart(songId, customKey) {
+            const song = allSongs.find(s => s._id === songId);
+            
+            document.getElementById("previewHeader").innerHTML = `
+                <h2 class="c-title">${song.name}</h2>
+                <div class="c-meta">ARTISTA: ${song.artist} | TONO ORIGINAL: ${song.key || '-'} | TONO DOMINGO: <span style="color:var(--chart-accent); font-weight:bold; font-size:14px;">${customKey}</span></div>
+            `;
+
+            let sectionsHTML = "";
+            if (song.sections && song.sections.length > 0) {
+                sectionsHTML = song.sections.map(sec => {
+                    let hasChordPro = /\[.*?\]/.test(sec.lyrics);
+                    let contentHTML = "";
+
+                    if (hasChordPro) {
+                        let parsedLyrics = sec.lyrics.replace(/\[(.*?)\]/g, '<span class="c-chord"><span>$1</span></span>');
+                        contentHTML = `<div class="chart-lyric">${parsedLyrics}</div>`;
+                    } else {
+                        let chordsHTML = sec.chords && sec.chords.length > 0 && sec.chords[0] !== "" 
+                                        ? `<div class="old-chords">${sec.chords.join(' - ')}</div>` : '';
+                        contentHTML = `${chordsHTML}<div class="chart-lyric">${sec.lyrics}</div>`;
+                    }
+
+                    return `
+                    <div class="song-section">
+                        <div class="sec-name">${sec.name.toUpperCase()}</div>
+                        ${contentHTML}
+                    </div>`;
+                }).join('');
+            } else { sectionsHTML = "<p style='color:gray;'>No hay letra cargada.</p>"; }
+
+            document.getElementById("previewRenderArea").innerHTML = sectionsHTML;
+            document.getElementById("chartModal").style.display = "flex";
+        }
+
+        function closePreview() { document.getElementById("chartModal").style.display = "none"; }
+
+        // --- GUARDAR Y ELIMINAR ---
+        async function saveSetlist() {
+            const data = {
+                name: document.getElementById("sName").value,
+                date: document.getElementById("sDate").value,
+                timeSlots: document.getElementById("sTimes").value.split(',').map(s => s.trim()),
+                songs: activeSongs.map(item => ({ songId: item.songId._id, setlistKey: item.setlistKey })),
+                team: activeTeam,
+                ministry: "Principal"
+            };
+
+            if (!data.name || !data.date) { alert("Nombre y fecha son obligatorios."); return; }
+
+            try {
+                const res = await fetch(currentSetId ? `/setlists/${currentSetId}` : "/setlists", {
+                    method: currentSetId ? "PUT" : "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    alert("¡Setlist guardado!");
+                    init();
+                    document.getElementById("editorPanel").style.display = "none";
+                } else { alert("Error al guardar."); }
+            } catch (err) { alert("Problema de red."); }
+        }
+
+        async function deleteSetlist() {
+            if (confirm("¿Seguro que deseas eliminar este servicio? Se borrará todo (Incluso la escaleta de Producción).")) {
+                try {
+                    await fetch(`/setlists/${currentSetId}`, {
+                        method: "DELETE",
+                        headers: { "Authorization": `Bearer ${token}` }
+                    });
+                    init();
+                    document.getElementById("editorPanel").style.display = "none";
+                } catch (err) { alert("Error al eliminar."); }
+            }
+        }
+
+        // Ocultar resultados de búsqueda al dar click fuera
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-area')) {
+                document.getElementById("songResults").style.display = "none";
+                document.getElementById("userResults").style.display = "none";
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

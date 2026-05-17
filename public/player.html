@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Modo Músico | C.A.N</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body style="background: #050505;">
+    <div class="container animate-up">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:15px;">
+            <button class="secondary" onclick="location.href='overview.html'">← SALIR</button>
+            <div style="text-align:center;">
+                <h1 id="songTitle" style="margin:0; font-size:28px; color:var(--primary);">CARGANDO...</h1>
+                <p id="songArtist" style="margin:0; color:var(--text-dim);"></p>
+            </div>
+            <div id="songKey" class="song-key" style="font-size:24px; padding:10px 20px;">--</div>
+        </header>
+
+        <div id="chordsContainer">
+            </div>
+    </div>
+
+    <script src="player.js"></script>
+</body>
+</html>

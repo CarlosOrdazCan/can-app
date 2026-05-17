@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Perfil | C.A.N.</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body.kids-theme { --primary: #00d2ff; }
+        .input-box { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 15px; text-align: left; }
+        .input-box label { display: block; font-size: 10px; color: var(--primary); font-weight: 900; margin-bottom: 5px; text-transform: uppercase; }
+        .input-box input, .input-box textarea { width: 100%; background: transparent; border: none; color: white; outline: none; font-size: 14px; }
+        .cam-btn { position: absolute; bottom: 5px; right: 15px; background: var(--primary); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid #000; font-size: 18px; }
+        .badge { display: inline-block; padding: 5px 15px; border-radius: 20px; font-size: 10px; font-weight: 900; background: var(--primary); color: white; letter-spacing: 2px; }
+        .kids-theme .badge { color: black; }
+    </style>
+</head>
+<body>
+    <script>
+        const activeMin = localStorage.getItem("activeMinistry") || "Principal";
+        if(activeMin === "KIDS") document.body.classList.add("kids-theme");
+    </script>
+
+    <div class="container animate-up">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+            <button class="secondary" onclick="location.href='index.html'">← VOLVER</button>
+            <h1 style="font-weight:900; letter-spacing: 2px; margin:0;">MI PERFIL</h1>
+            <button onclick="saveChanges()" style="background:var(--primary); color:white; border:none; padding:12px 25px; border-radius:12px; font-weight:bold; cursor:pointer;">💾 GUARDAR</button>
+        </header>
+
+        <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:40px;">
+            <div class="glass-card" style="text-align:center;">
+                <div style="width:180px; height:180px; margin:0 auto; border-radius:50%; border:4px solid var(--primary); position:relative;">
+                    <img id="avatarPreview" src="" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
+                    <label for="photoInput" class="cam-btn">📷</label>
+                    <input type="file" id="photoInput" style="display:none" accept="image/*">
+                </div>
+                <h2 id="display-name" style="margin:20px 0 5px 0; font-weight:900; text-transform:uppercase;"></h2>
+                <p id="display-role" style="color:gray; font-weight:bold; font-size:12px; letter-spacing:2px; text-transform:uppercase; margin-bottom: 15px;"></p>
+                <div id="display-affiliation" class="badge"></div>
+            </div>
+
+            <div class="glass-card">
+                <h3 style="color:var(--primary); font-size:12px; letter-spacing:2px; margin-bottom:20px;">DATOS PERSONALES</h3>
+                
+                <div class="input-box">
+                    <label>Nombre Completo</label>
+                    <input id="userName" type="text" placeholder="Tu nombre...">
+                </div>
+                
+                <div class="input-box">
+                    <label>Teléfono</label>
+                    <input id="userPhone" type="text" placeholder="Ej: 55 1234 5678">
+                </div>
+
+                <div class="input-box">
+                    <label>Biografía (Para el directorio)</label>
+                    <textarea id="userBio" rows="3" style="resize:none;" placeholder="Escribe algo sobre ti..."></textarea>
+                </div>
+
+                <h3 style="color:var(--primary); font-size:12px; letter-spacing:2px; margin:30px 0 20px 0;">SEGURIDAD</h3>
+                
+                <div class="input-box" style="border-color: rgba(255,0,0,0.3);">
+                    <label style="color:gray;">Cambiar Contraseña</label>
+                    <input id="userPass" type="password" placeholder="Escribe aquí solo si deseas cambiarla...">
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="profile.js"></script>
+</body>
+</html>

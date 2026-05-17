@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+  if (!localStorage.getItem("token")) {
+    window.location.href = "login.html";
+  }
+</script>
+<meta charset="UTF-8">
+<title>Modo Músico</title>
+</head>
+<body>
+
+<div id="liveContainer"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+
+const socket = io();
+
+let state = {};
+const notes = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+
+socket.on("band:update",(data)=>{
+  state = data;
+  render();
+});
+
+function render(){
+
+  const song = state.setlist[state.index];
+
+  if(!song){
+    liveContainer.innerHTML = "<h2>Esperando líder...</h2>";
+    return;
+  }
+
+  let html = `<h1>${song.name}</h1>`;
+
+  song.sections.forEach(sec=>{
+    html += `
+      <div>
+        <h2>${sec.name}</h2>
+        <p>${transpose(sec.chords)}</p>
+      </div>
+    `;
+  });
+
+  liveContainer.innerHTML = html;
+}
+
+function transpose(chords){
+  return chords.split("-").map(c=>{
+    let i = notes.indexOf(c.trim());
+    if(i === -1) return c;
+    return notes[(i + state.transpose + 12) % 12];
+  }).join("-");
+}
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | C.A.N. Engine</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body style="display:flex; align-items:center; justify-content:center; min-height:100vh; background:#000; margin:0;">
+    <div class="login-card animate-up" style="background:#111; padding:50px; border-radius:30px; border:1px solid #333; width:100%; max-width:400px; text-align:center;">
+        <h1 style="color:white; letter-spacing:5px; font-weight:900; margin-bottom: 5px;">C.A.N.</h1>
+        <p style="color:#555; font-size:10px; margin-bottom:30px; letter-spacing: 2px;">ACCESO AUTORIZADO</p>
+        
+        <div id="login-form">
+            <input type="text" id="userInput" placeholder="Usuario" style="width:100%; padding:15px; margin-bottom:20px; background:#222; border:1px solid #444; color:white; border-radius:12px; outline:none;">
+            <input type="password" id="passInput" placeholder="Contraseña" style="width:100%; padding:15px; margin-bottom:20px; background:#222; border:1px solid #444; color:white; border-radius:12px; outline:none;">
+            <button onclick="handleLogin()" style="width:100%; padding:15px; background:#ff1a1a; color:white; border:none; border-radius:12px; font-weight:bold; cursor:pointer;">ENTRAR</button>
+        </div>
+
+        <div id="hybrid-selector" style="display:none; margin-top:10px;">
+            <p style="color:white; font-size:12px; font-weight:bold; margin-bottom:20px;">SELECCIONA TU ENTORNO</p>
+            <button onclick="selectMin('Principal')" style="width:100%; padding:15px; background:#ff1a1a; color:white; border:none; border-radius:12px; font-weight:900; cursor:pointer; margin-bottom:15px;">ALABANZA PRINCIPAL</button>
+            <button onclick="selectMin('KIDS')" style="width:100%; padding:15px; background:#00d2ff; color:black; border:none; border-radius:12px; font-weight:900; cursor:pointer;">ALABANZA KIDS</button>
+        </div>
+    </div>
+
+    <script>
+        async function handleLogin() {
+            const username = document.getElementById("userInput").value;
+            const password = document.getElementById("passInput").value;
+
+            try {
+                const res = await fetch("/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem("token", data.token);
+                    
+                    if (data.user.ministry === "Hibrido") {
+                        document.getElementById("login-form").style.display = "none";
+                        document.getElementById("hybrid-selector").style.display = "block";
+                    } else {
+                        localStorage.setItem("activeMinistry", data.user.ministry || "Principal");
+                        window.location.href = "index.html";
+                    }
+                } else {
+                    alert("Credenciales incorrectas");
+                }
+            } catch (err) {
+                alert("Error de conexión con el servidor.");
+            }
+        }
+
+        function selectMin(min) {
+            localStorage.setItem("activeMinistry", min);
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

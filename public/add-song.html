@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Editor de Canción | C.A.N.</title>
+    <link rel="stylesheet" href="styles.css">
+    <style> body.kids-theme { --primary: #00d2ff; --primary-glow: rgba(0, 210, 255, 0.3); } </style>
+</head>
+<body>
+    <script>
+        const activeMin = localStorage.getItem("activeMinistry") || "Principal";
+        if(activeMin === "KIDS") document.body.classList.add("kids-theme");
+    </script>
+
+    <div class="container animate-epic">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:50px;">
+            <div style="display:flex; align-items:center; gap:20px;">
+                <button class="secondary" onclick="location.href='overview.html'" style="padding:12px 20px;">← VOLVER</button>
+                <h1 id="formTitle" style="margin:0; letter-spacing:4px; font-weight:900;">NUEVA CANCIÓN</h1>
+            </div>
+            <button onclick="saveSong()" style="border: 1px solid var(--primary);">💾 GUARDAR CANCIÓN</button>
+        </header>
+
+        <div class="glass-card" style="display:grid; grid-template-columns: 1fr 1fr; gap:30px; margin-bottom:40px;">
+            <div><label>TÍTULO</label><input type="text" id="sName" style="width:100%; padding:15px; background:#111; color:white; border:1px solid #333; border-radius:12px; margin-top:5px;"></div>
+            <div><label>ARTISTA</label><input type="text" id="sArtist" style="width:100%; padding:15px; background:#111; color:white; border:1px solid #333; border-radius:12px; margin-top:5px;"></div>
+            <div><label>TONO ORIGINAL</label>
+                <select id="sKey" style="width:100%; padding:15px; background:#111; color:white; border:1px solid #333; border-radius:12px; margin-top:5px;">
+                    <option value="C">C</option><option value="C#">C#</option><option value="Db">Db</option>
+                    <option value="D">D</option><option value="D#">D#</option><option value="Eb">Eb</option>
+                    <option value="E">E</option><option value="F">F</option><option value="F#">F#</option>
+                    <option value="Gb">Gb</option><option value="G">G</option><option value="G#">G#</option>
+                    <option value="Ab">Ab</option><option value="A">A</option><option value="A#">A#</option>
+                    <option value="Bb">Bb</option><option value="B">B</option>
+                </select>
+            </div>
+            <div><label>BPM (TEMPO)</label><input type="text" id="sTempo" style="width:100%; padding:15px; background:#111; color:white; border:1px solid #333; border-radius:12px; margin-top:5px;"></div>
+            <div><label>DURACIÓN (MINUTOS)</label><input type="number" step="any" id="sDuration" placeholder="Ej: 5.30" style="width:100%; padding:15px; background:#111; color:white; border:1px solid #333; border-radius:12px; margin-top:5px;"></div>
+            <div><label>LINK DE REFERENCIA</label><input type="text" id="sLink" style="width:100%; padding:15px; background:#111; color:white; border:1px solid #333; border-radius:12px; margin-top:5px;"></div>
+        </div>
+
+        <div class="glass-card" style="margin-bottom:40px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="margin:0; font-weight:900;">PARSER INTELIGENTE (Pegar Letra y Acordes)</h3>
+                <button onclick="parseRawSong()" class="secondary" style="border: 1px solid var(--primary); padding:8px 15px; border-radius:10px;">⚡ AUTO-SEPARAR SECCIONES</button>
+            </div>
+            <textarea id="rawSongText" rows="6" placeholder="Pega aquí la canción con acordes (ej. desde LaCuerda o Ultimate Guitar)..." style="width:100%; padding:15px; background:#111; color:white; border:1px solid #333; border-radius:12px; outline:none; font-family:monospace; resize:vertical;"></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0; font-weight:900;">ESTRUCTURA Y LETRA</h2>
+            <button onclick="addSection()" class="secondary" style="border-radius:10px;">+ AGREGAR SECCIÓN</button>
+        </div>
+
+        <div id="sectionsContainer" style="display:flex; flex-direction:column; gap:20px;"></div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem("token");
+        if (!token) window.location.href = "login.html";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let songId = urlParams.get('id');
+
+        async function init() {
+            if (songId) {
+                document.getElementById("formTitle").innerText = "EDITAR CANCIÓN";
+                const res = await fetch("/songs", { headers: { "Authorization": `Bearer ${token}` } });
+                const songs = await res.json();
+                const s = songs.find(x => x._id === songId);
+                if (s) {
+                    document.getElementById("sName").value = s.name || "";
+                    document.getElementById("sArtist").value = s.artist || "";
+                    document.getElementById("sKey").value = s.key || "C";
+                    document.getElementById("sTempo").value = s.tempo || "";
+                    document.getElementById("sDuration").value = s.duration || "";
+                    document.getElementById("sLink").value = s.referenceLink || "";
+                    
+                    s.sections.forEach(sec => addSection(sec.name, sec.chords.join(" - "), sec.lyrics));
+                }
+            } else {
+                addSection("Intro", "", "");
+            }
+        }
+
+        function addSection(name = "Verso", chords = "", lyrics = "") {
+            const div = document.createElement("div");
+            div.style = "background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding:25px; border-radius:20px;";
+            div.innerHTML = `
+                <div style="display:flex; gap:15px; margin-bottom:15px;">
+                    <div style="flex:1;"><label>NOMBRE SECCIÓN</label><input class="sec-name" value="${name}" style="width:100%; padding:12px; background:#111; color:white; border:1px solid #333; border-radius:8px; outline:none; margin-top:5px;"></div>
+                    <div style="flex:2;"><label>ACORDES</label><input class="sec-chords" value="${chords}" style="width:100%; padding:12px; background:#111; color:white; border:1px solid #333; border-radius:8px; outline:none; font-family:monospace; font-size:16px; margin-top:5px;"></div>
+                    <button onclick="this.parentElement.parentElement.remove()" style="color:#ff4444; padding:20px 25px; background:none; border:1px solid rgba(255,0,0,0.3); border-radius:8px; cursor:pointer; margin-top:20px;">✕</button>
+                </div>
+                <div><label>LETRA</label><textarea class="sec-lyrics" rows="3" style="width:100%; padding:12px; background:#111; color:white; border:1px solid #333; border-radius:8px; outline:none; margin-top:5px; resize:vertical;">${lyrics}</textarea></div>
+            `;
+            document.getElementById("sectionsContainer").appendChild(div);
+        }
+
+        async function saveSong() {
+            const sections = Array.from(document.querySelectorAll("#sectionsContainer > div")).map(div => ({
+                name: div.querySelector(".sec-name").value,
+                chords: div.querySelector(".sec-chords").value.split(/[\s\-]+/).filter(c => c),
+                lyrics: div.querySelector(".sec-lyrics").value 
+            }));
+            
+            // Usamos parseFloat en lugar de parseInt para que reconozca los decimales (ej. 5.30)
+            let durInput = document.getElementById("sDuration").value;
+            let durNum = durInput ? parseFloat(durInput) : 5;
+
+            const data = {
+                name: document.getElementById("sName").value,
+                artist: document.getElementById("sArtist").value,
+                key: document.getElementById("sKey").value,
+                tempo: document.getElementById("sTempo").value,
+                duration: durNum,
+                referenceLink: document.getElementById("sLink").value,
+                sections
+            };
+            
+            try {
+                const res = await fetch(songId ? `/songs/${songId}` : "/songs", { 
+                    method: songId ? "PUT" : "POST", 
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    }, 
+                    body: JSON.stringify(data) 
+                });
+                
+                if (res.ok) {
+                    location.href = 'overview.html';
+                } else {
+                    alert("Error al guardar la música. Verifique la conexión con el servidor.");
+                }
+            } catch (err) {
+                alert("Error de red al intentar guardar.");
+            }
+        }
+        
+        
+        // --- PARSER INTELIGENTE DE ACORDES Y LETRA ---
+        function parseRawSong() {
+            const rawText = document.getElementById("rawSongText").value.trim();
+            if (!rawText) return alert("Por favor pega el texto de la canción primero.");
+            
+            const sectionRegex = /^\[(.*?)\]$|^(.*?):$/i;
+            const chordLineRegex = /^[\sA-Ga-g#mb0-9dimaugMadd/()|]+$/;
+            
+            const lines = rawText.split('\n');
+            let currentSectionName = "Verso";
+            let currentChords = [];
+            let currentLyrics = [];
+            const sections = [];
+            
+            function pushCurrentSection() {
+                if (currentChords.length > 0 || currentLyrics.length > 0) {
+                    sections.push({
+                        name: currentSectionName,
+                        chords: currentChords.join(" ").trim(),
+                        lyrics: currentLyrics.join("\n").trim()
+                    });
+                }
+            }
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if (!trimmed) return;
+
+                const sectionMatch = trimmed.match(sectionRegex);
+                if (sectionMatch) {
+                    pushCurrentSection();
+                    currentSectionName = (sectionMatch[1] || sectionMatch[2]).trim();
+                    currentChords = [];
+                    currentLyrics = [];
+                    return;
+                }
+
+                // Detectamos si es línea de acordes: letras mayúsculas, m, #, b, números, y que haga match completo
+                const isChordLine = chordLineRegex.test(trimmed) && /[A-G]/.test(trimmed);
+                
+                if (isChordLine) {
+                    const chordsInLine = trimmed.split(/\s+/).filter(c => c);
+                    currentChords.push(...chordsInLine);
+                } else {
+                    currentLyrics.push(trimmed);
+                }
+            });
+            pushCurrentSection();
+
+            if (sections.length > 0) {
+                document.getElementById("sectionsContainer").innerHTML = "";
+                sections.forEach(s => addSection(s.name, s.chords, s.lyrics));
+            } else {
+                alert("No se pudo detectar ninguna estructura válida.");
+            }
+        }
+
+        // --- EXTRACCIÓN AUTOMÁTICA DE DURACIÓN (YOUTUBE) ---
+        document.getElementById("sLink").addEventListener("input", async function() {
+            const url = this.value;
+            if (url.includes("youtube.com") || url.includes("youtu.be")) {
+                const durationInput = document.getElementById("sDuration");
+                durationInput.placeholder = "Calculando...";
+                try {
+                    const res = await fetch("/api/yt-info", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                        body: JSON.stringify({ url })
+                    });
+                    const data = await res.json();
+                    if (data.duration) {
+                        durationInput.value = data.duration;
+                    }
+                } catch (e) {
+                    console.error("Error fetching YT duration", e);
+                }
+                durationInput.placeholder = "Ej: 5.30";
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>

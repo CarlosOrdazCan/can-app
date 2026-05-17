@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>LIVE Cabina | C.A.N. Producción</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        :root { --prod-accent: #b300ff; }
+        body { background: #000; color: #ddd; overflow-x: hidden; }
+        
+        .live-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: #0a0a0c; border-bottom: 2px solid var(--prod-accent); position: sticky; top: 0; z-index: 100; box-shadow: 0 5px 20px rgba(179,0,255,0.15); }
+        .clock { font-size: 28px; font-weight: 900; color: white; font-variant-numeric: tabular-nums; letter-spacing: 2px; }
+        .live-badge { background: #ff1a1a; color: white; padding: 5px 12px; border-radius: 6px; font-weight: 900; letter-spacing: 3px; font-size: 12px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .crew-status-bar { background: #111; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+        .crew-list { display: flex; gap: 20px; flex-wrap: wrap; }
+        .crew-dot { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: bold; color: gray; background: #0a0a0c; padding: 5px 12px; border-radius: 20px; border: 1px solid #333; }
+        .dot-red { color: #ff1a1a; text-shadow: 0 0 5px #ff1a1a; }
+        .dot-green { color: #00ff88; text-shadow: 0 0 5px #00ff88; }
+        
+        .btn-ready { background: #00ff88; color: black; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px rgba(0,255,136,0.2); font-size: 11px; margin-left: 5px; }
+        .btn-ready:hover { transform: scale(1.05); }
+        .btn-reset { background: transparent; border: 1px solid #ff1a1a; color: #ff1a1a; padding: 8px 15px; border-radius: 8px; font-size: 10px; font-weight: bold; cursor: pointer; }
+
+        .live-grid { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; padding: 20px 30px; height: calc(100vh - 130px); }
+        .panel { background: #0a0a0c; border: 1px solid #222; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
+        .panel-header { background: #111; padding: 15px; font-weight: 900; font-size: 12px; letter-spacing: 2px; color: var(--prod-accent); border-bottom: 1px solid #333; text-align: center; }
+        .panel-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
+
+        .patch-item { background: rgba(255,255,255,0.03); border-left: 3px solid var(--prod-accent); padding: 12px; margin-bottom: 10px; border-radius: 0 8px 8px 0; }
+        .patch-name { font-weight: bold; color: white; font-size: 14px; margin-bottom: 5px; }
+
+        .ros-block { display: grid; grid-template-columns: 80px 1fr; gap: 15px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #333; }
+        .ros-time { font-size: 18px; font-weight: 900; color: white; }
+        .ros-title { font-size: 16px; font-weight: bold; color: var(--prod-accent); margin-bottom: 8px; }
+        .ros-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .note-box { background: #111; padding: 10px; border-radius: 8px; font-size: 12px; border: 1px solid #222; }
+        .note-title { font-size: 9px; font-weight: bold; color: gray; margin-bottom: 4px; display: block; }
+
+        .song-item { margin-bottom: 30px; }
+        .song-title { font-size: 14px; font-weight: 900; color: white; background: #222; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .lyric-section { margin-bottom: 10px; }
+        .lyric-name { font-size: 10px; color: var(--prod-accent); font-weight: bold; margin-bottom: 2px; }
+        .lyric-text { font-size: 13px; color: #bbb; line-height: 1.5; white-space: pre-line; }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <header class="live-header">
+        <div style="display:flex; align-items:center; gap:20px;">
+            <button class="secondary" onclick="location.href='prod-index.html'" style="padding:8px 15px; font-size:10px;">← SALIR</button>
+            <div class="live-badge">ON AIR</div>
+        </div>
+        <div class="clock" id="liveClock">00:00:00</div>
+        <div id="sDateTitle" style="color:gray; font-weight:bold; font-size:12px; letter-spacing:2px; text-transform:uppercase;">CARGANDO...</div>
+    </header>
+
+    <div class="crew-status-bar">
+        <div class="crew-list" id="crewStatusList">
+            <span style="color:gray; font-size:11px;">Cargando status del crew...</span>
+        </div>
+        <div id="myActionButton" style="display:flex; align-items:center;"></div> 
+    </div>
+
+    <div class="live-grid">
+        <div class="panel">
+            <div class="panel-header">🎚️ PATCH LIST (FOH / MONITORES)</div>
+            <div class="panel-content" id="patchContainer"></div>
+        </div>
+        <div class="panel">
+            <div class="panel-header">⏱️ RUN OF SERVICE (DIRECTOR)</div>
+            <div class="panel-content" id="rosContainer"></div>
+        </div>
+        <div class="panel">
+            <div class="panel-header">📺 LETRAS (PANTALLAS)</div>
+            <div class="panel-content" id="lyricsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem("token");
+        const urlParams = new URLSearchParams(window.location.search);
+        const setId = urlParams.get('id');
+        let currentUser = {};
+        let currentSetlist = null;
+
+        if (!token || !setId) window.location.href = "prod-index.html";
+        try { currentUser = JSON.parse(window.atob(token.split('.')[1])); } catch(e) {}
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById("liveClock").innerText = now.toLocaleTimeString('es-MX', { hour12: false });
+        }, 1000);
+
+        async function loadLiveView() {
+            try {
+                const usersRes = await fetch("/users", { headers: { "Authorization": `Bearer ${token}` } });
+                const allUsers = await usersRes.json();
+
+                const setRes = await fetch("/setlists", { headers: { "Authorization": `Bearer ${token}` } });
+                const setlists = await setRes.json();
+                currentSetlist = setlists.find(x => x._id === setId);
+
+                if (currentSetlist) {
+                    document.getElementById("sDateTitle").innerText = `${currentSetlist.name} | ${currentSetlist.date}`;
+
+                    renderCrewStatus();
+                    renderActionButton();
+
+                    // --- GENERAR PATCH LIST (TABLA COMPLEJA) ---
+                    let patchHTML = "";
+                    if (currentSetlist.team && currentSetlist.team.length > 0) {
+                        currentSetlist.team.forEach(member => {
+                            const userDb = allUsers.find(u => u._id === member.memberId);
+                            
+                            let channelsList = "<div style='color:gray; font-size:11px; margin-top:5px;'>Sin patch asignado</div>";
+                            
+                            // Verificar si es un Arreglo (Estructura Nueva)
+                            if (userDb && Array.isArray(userDb.audioChannels) && userDb.audioChannels.length > 0) {
+                                channelsList = `<div style="margin-top:10px; display:grid; grid-template-columns: 1fr 50px 50px; gap:10px; font-size:10px; color:gray; font-weight:bold; border-bottom:1px solid #333; padding-bottom:4px; margin-bottom:5px;">
+                                    <div>FUENTE / MICRO</div><div>CANAL</div><div style="color:#00d2ff;">MONITOR</div>
+                                </div>` + userDb.audioChannels.map(c => `
+                                    <div style="display:grid; grid-template-columns: 1fr 50px 50px; gap:10px; font-size:12px; margin-bottom:5px;">
+                                        <div style="color:white; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${c.inputName}</div>
+                                        <div style="color:#00ff88; font-family:monospace; font-weight:bold;">${c.channel}</div>
+                                        <div style="color:#00d2ff; font-family:monospace; font-weight:bold;">${c.auxLine}</div>
+                                    </div>
+                                `).join('');
+                            } else if (userDb && typeof userDb.audioChannels === 'string' && userDb.audioChannels !== "") {
+                                channelsList = `<div style="color:#00ff88; font-family:monospace; font-size:12px; margin-top:5px;">${userDb.audioChannels}</div>`;
+                            }
+
+                            patchHTML += `
+                            <div class="patch-item">
+                                <div class="patch-name">${member.name} <span style="color:gray; font-weight:normal; font-size:11px;">(${member.role})</span></div>
+                                ${channelsList}
+                            </div>`;
+                        });
+                    } else { patchHTML = "<p style='color:gray; font-size:12px; text-align:center;'>No hay equipo asignado.</p>"; }
+                    document.getElementById("patchContainer").innerHTML = patchHTML;
+
+                    // --- GENERAR ROS ---
+                    let rosHTML = "";
+                    if (currentSetlist.runOfService && currentSetlist.runOfService.length > 0) {
+                        currentSetlist.runOfService.forEach(r => {
+                            rosHTML += `
+                            <div class="ros-block">
+                                <div class="ros-time">${r.time}</div>
+                                <div>
+                                    <div class="ros-title">${r.activity}</div>
+                                    <div class="ros-notes">
+                                        <div class="note-box"><span class="note-title">CABINA (Audio/Luces)</span>${r.cabinaNotes || '-'}</div>
+                                        <div class="note-box" style="border-color:rgba(0,210,255,0.3);"><span class="note-title" style="color:#00d2ff;">VIDEO (Cámaras/Letras)</span>${r.videoNotes || '-'}</div>
+                                    </div>
+                                </div>
+                            </div>`;
+                        });
+                    } else { rosHTML = "<p style='color:gray; font-size:12px; text-align:center;'>No hay escaleta.</p>"; }
+                    document.getElementById("rosContainer").innerHTML = rosHTML;
+
+                    // --- GENERAR LETRAS ---
+                    let lyricsHTML = "";
+                    if (currentSetlist.songs && currentSetlist.songs.length > 0) {
+                        currentSetlist.songs.forEach((item, index) => {
+                            const song = item.songId;
+                            lyricsHTML += `<div class="song-item"><div class="song-title"><span>${index + 1}. ${song.name}</span><span style="color:var(--prod-accent);">BPM: ${song.tempo || '--'}</span></div>`;
+                            if (song.sections) {
+                                song.sections.forEach(sec => {
+                                    if (sec.lyrics && sec.lyrics.trim() !== "") {
+                                        lyricsHTML += `<div class="lyric-section"><div class="lyric-name">${sec.name.toUpperCase()}</div><div class="lyric-text">${sec.lyrics}</div></div>`;
+                                    }
+                                });
+                            }
+                            lyricsHTML += `</div>`;
+                        });
+                    } else { lyricsHTML = "<p style='color:gray; font-size:12px; text-align:center;'>No hay canciones.</p>"; }
+                    document.getElementById("lyricsContainer").innerHTML = lyricsHTML;
+                }
+            } catch (err) { console.error("Error cargando la vista", err); }
+        }
+
+        async function syncCrewStatus() {
+            try {
+                const setRes = await fetch("/setlists", { headers: { "Authorization": `Bearer ${token}` } });
+                const setlists = await setRes.json();
+                const freshSetlist = setlists.find(x => x._id === setId);
+                if (freshSetlist) {
+                    currentSetlist.prodTeam = freshSetlist.prodTeam;
+                    renderCrewStatus();
+                    renderActionButton();
+                }
+            } catch (err) {}
+        }
+        
+        setInterval(syncCrewStatus, 3000);
+
+        function renderCrewStatus() {
+            const list = document.getElementById("crewStatusList");
+            if (!currentSetlist.prodTeam || currentSetlist.prodTeam.length === 0) {
+                list.innerHTML = `<span style="color:gray; font-size:11px;">No hay crew asignado a esta escaleta.</span>`;
+                return;
+            }
+
+            const activeCrew = currentSetlist.prodTeam.filter(m => m.attendance !== "Recibe");
+            
+            if (activeCrew.length === 0) {
+                list.innerHTML = `<span style="color:gray; font-size:11px;">El crew técnico asignado está de descanso (Recibe).</span>`;
+                return;
+            }
+
+            list.innerHTML = activeCrew.map(member => {
+                const statusClass = member.ready ? "dot-green" : "dot-red";
+                const statusIcon = member.ready ? "🟢" : "🔴";
+                return `<div class="crew-dot">
+                            <span class="${statusClass}">${statusIcon}</span>
+                            <span style="color:white;">${member.name}</span>
+                            <span style="color:#666; font-size:10px;">(${member.role} | <span style="color:var(--prod-accent);">${member.timeSlot}</span>)</span>
+                        </div>`;
+            }).join('');
+        }
+
+        function renderActionButton() {
+            const container = document.getElementById("myActionButton");
+            
+            if (currentUser.role === "Full Administrador" || (currentUser.techBranch && currentUser.techBranch.includes("Full"))) {
+                container.innerHTML = `<button class="btn-reset" onclick="resetAllStatuses()">🔄 RESET SEMÁFOROS</button>`;
+                return;
+            }
+
+            if (currentSetlist.prodTeam) {
+                const myAssignments = currentSetlist.prodTeam.filter(m => m.memberId === currentUser.id && m.attendance !== "Recibe");
+                
+                if (myAssignments.length > 0) {
+                    let buttonsHTML = "";
+                    myAssignments.forEach(assignment => {
+                        if (!assignment.ready) {
+                            buttonsHTML += `<button class="btn-ready" onclick="toggleMyStatus('${assignment.timeSlot}', true)">✅ LISTO (${assignment.timeSlot})</button>`;
+                        } else {
+                            buttonsHTML += `<button class="btn-ready" style="background:#444; color:white; box-shadow:none;" onclick="toggleMyStatus('${assignment.timeSlot}', false)">Desmarcar (${assignment.timeSlot})</button>`;
+                        }
+                    });
+                    container.innerHTML = buttonsHTML;
+                    return;
+                }
+            }
+            container.innerHTML = ""; 
+        }
+
+        async function toggleMyStatus(timeSlot, isReady) {
+            const teamIndex = currentSetlist.prodTeam.findIndex(m => m.memberId === currentUser.id && m.timeSlot === timeSlot);
+            if (teamIndex !== -1) {
+                currentSetlist.prodTeam[teamIndex].ready = isReady;
+                await fetch(`/setlists/${setId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                    body: JSON.stringify({ prodTeam: currentSetlist.prodTeam })
+                });
+                renderCrewStatus();
+                renderActionButton();
+            }
+        }
+
+        async function resetAllStatuses() {
+            if(confirm("¿Seguro que deseas poner todos los semáforos en rojo para iniciar un nuevo servicio?")) {
+                currentSetlist.prodTeam.forEach(m => m.ready = false);
+                await fetch(`/setlists/${setId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                    body: JSON.stringify({ prodTeam: currentSetlist.prodTeam })
+                });
+                renderCrewStatus();
+            }
+        }
+
+        loadLiveView();
+    </script>
+</body>
+</html>

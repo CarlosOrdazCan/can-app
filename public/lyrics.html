@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script>
+  if (!localStorage.getItem("token")) {
+    window.location.href = "login.html";
+  }
+</script>
+<meta charset="UTF-8">
+<title>Modo Letras</title>
+
+<style>
+body{
+  margin:0;
+  background:black;
+  color:white;
+  font-family: Arial;
+  text-align:center;
+}
+
+/* CONTENIDO */
+#lyricsContainer{
+  padding:60px 40px;
+}
+
+/* TITULO */
+h1{
+  font-size:40px;
+  margin-bottom:40px;
+}
+
+/* LETRA */
+.lyrics{
+  font-size:32px;
+  line-height:1.8;
+  white-space:pre-line;
+}
+
+/* CONTROLES */
+.controls{
+  position:fixed;
+  bottom:20px;
+  width:100%;
+}
+
+.controls button{
+  padding:15px;
+  margin:5px;
+  border:none;
+  border-radius:10px;
+  background:#ff4d4d;
+  color:white;
+}
+
+/* SCROLL */
+.scroll-controls{
+  position:fixed;
+  right:10px;
+  top:40%;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.scroll-controls button{
+  padding:10px;
+  border:none;
+  border-radius:10px;
+  background:#ff4d4d;
+  color:white;
+}
+
+/* OCULTAR UI */
+.hidden{
+  opacity:0;
+}
+</style>
+
+</head>
+<body>
+
+<div id="lyricsContainer"></div>
+
+<div class="controls">
+  <button onclick="prev()">⬅</button>
+  <button onclick="next()">➡</button>
+</div>
+
+<div class="scroll-controls">
+  <button onclick="startScroll()">▶</button>
+  <button onclick="stopScroll()">⏸</button>
+</div>
+
+<script>
+
+/* =========================
+   VARIABLES
+========================= */
+let setlist = JSON.parse(localStorage.getItem("liveSetlist")) || [];
+let index = 0;
+
+/* =========================
+   LIMPIAR ACORDES
+========================= */
+const notes = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+
+function removeChords(text){
+
+  return text.split("\n").map(line => {
+
+    return line.split(" ").filter(word => {
+
+      return !notes.includes(word);
+
+    }).join(" ");
+
+  }).join("\n");
+}
+
+/* =========================
+   RENDER
+========================= */
+function render(){
+
+  const song = setlist[index];
+
+  if(!song){
+    document.getElementById("lyricsContainer").innerHTML = "<h2>No hay canciones</h2>";
+    return;
+  }
+
+  let html = `<h1>${song.name}</h1>`;
+
+  song.sections.forEach(sec => {
+
+    html += `
+      <div class="lyrics">
+        ${removeChords(sec.chords || sec.content || "")}
+      </div>
+    `;
+  });
+
+  document.getElementById("lyricsContainer").innerHTML = html;
+}
+
+/* =========================
+   NAV
+========================= */
+function next(){
+  if(index < setlist.length - 1){
+    index++;
+    window.scrollTo(0,0);
+    render();
+  }
+}
+
+function prev(){
+  if(index > 0){
+    index--;
+    window.scrollTo(0,0);
+    render();
+  }
+}
+
+/* =========================
+   SCROLL
+========================= */
+let scrollInterval;
+
+function startScroll(){
+  scrollInterval = setInterval(()=>{
+    window.scrollBy(0,1);
+  },30);
+}
+
+function stopScroll(){
+  clearInterval(scrollInterval);
+}
+
+/* =========================
+   TAP CONTROL
+========================= */
+document.body.addEventListener("click",(e)=>{
+  if(e.target.tagName !== "BUTTON"){
+    next();
+  }
+});
+
+/* INIT */
+render();
+
+</script>
+
+</body>
+<script>
+const token = localStorage.getItem("token");
+
+if(!token){
+  window.location.href = "login.html";
+}
+</script>
+</html>

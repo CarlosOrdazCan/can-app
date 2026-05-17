@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script>
+  if (!localStorage.getItem("token")) {
+    window.location.href = "login.html";
+  }
+</script>
+    <meta charset="UTF-8">
+    <title>C.A.N | Nueva Canción</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="glass-card">
+            <h2 style="color: var(--primary); margin-bottom:30px;">REGISTRAR CANCIÓN</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label>Título</label>
+                    <input id="title" placeholder="Ej: Way Maker">
+                </div>
+                <div>
+                    <label>Artista / Director</label>
+                    <input id="artist" placeholder="Ej: Priscilla Bueno">
+                </div>
+                <div>
+                    <label>Tono Base</label>
+                    <input id="key" placeholder="Ej: G#m">
+                </div>
+                <div>
+                    <label>BPM / Tiempo</label>
+                    <input id="tempo" placeholder="Ej: 68">
+                </div>
+            </div>
+
+            <h3 style="margin-top: 40px;">Estructura de la Canción</h3>
+            <div id="sectionsContainer"></div>
+            
+            <button class="secondary" onclick="addSectionUI()" style="margin-top:10px;">+ Añadir Parte</button>
+
+            <div style="margin-top: 50px; border-top: 1px solid var(--glass-border); padding-top: 30px;">
+                <button onclick="saveSong()" style="width:100%; font-size:16px; padding:18px;">💾 GUARDAR EN EL SISTEMA</button>
+            </div>
+        </div>
+        <button class="secondary" onclick="location.href='index.html'">← Volver</button>
+    </div>
+
+    <script>
+        const API = "http://localhost:3000";
+        const token = localStorage.getItem("token");
+
+        function addSectionUI() {
+            const container = document.getElementById("sectionsContainer");
+            const div = document.createElement("div");
+            div.className = "glass-card section-item";
+            div.style.padding = "20px";
+            div.style.background = "rgba(0,0,0,0.2)";
+            div.innerHTML = `
+                <div style="display:flex; gap:15px; align-items:center;">
+                    <select class="sec-type" style="width:180px;">
+                        <option>Intro</option><option>Verso</option><option>Pre-Coro</option>
+                        <option>Coro</option><option>Puente</option><option>Solo</option><option>Outro</option>
+                    </select>
+                    <input class="sec-chords" placeholder="Acordes (Ej: G D Em C)" style="flex-grow:1">
+                    <button onclick="this.parentElement.parentElement.remove()" class="secondary">✕</button>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        async function saveSong() {
+            const sectionElements = document.querySelectorAll(".section-item");
+            const sections = Array.from(sectionElements).map(el => ({
+                name: el.querySelector(".sec-type").value,
+                // Limpiamos los acordes y los volvemos un array
+                chords: el.querySelector(".sec-chords").value.split(" ").filter(c => c.trim() !== "")
+            }));
+
+            const songData = {
+                name: document.getElementById("title").value,
+                artist: document.getElementById("artist").value,
+                key: document.getElementById("key").value,
+                tempo: document.getElementById("tempo").value,
+                sections: sections
+            };
+
+            const res = await fetch(`${API}/songs`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify(songData)
+            });
+
+            if(res.ok) {
+                alert("¡Canción registrada!");
+                location.href = "overview.html";
+            } else {
+                alert("Error al guardar. Revisa la conexión.");
+            }
+        }
+        // Iniciamos con una sección
+        addSectionUI();
+    </script>
+</body>
+</html>

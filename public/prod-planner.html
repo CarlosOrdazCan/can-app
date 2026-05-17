@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Armar Escaleta | C.A.N. Producción</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        :root { --prod-accent: #b300ff; }
+        body { background: #050505; }
+        .grid-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; margin-top: 30px; }
+        .info-panel { background: rgba(255,255,255,0.02); border: 1px solid #333; border-radius: 20px; padding: 25px; }
+        .ros-panel { background: rgba(15,15,20,0.8); border: 1px solid var(--prod-accent); border-radius: 20px; padding: 25px; box-shadow: 0 0 20px rgba(179,0,255,0.05); }
+        .ros-row { display: grid; grid-template-columns: 100px 1.5fr 2fr 2fr 50px; gap: 15px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; margin-bottom: 15px; align-items: start; border: 1px solid #222; }
+        .ros-row input, .ros-row textarea { width: 100%; background: #111; color: white; border: 1px solid #333; padding: 10px; border-radius: 8px; outline: none; font-family: inherit; }
+        .ros-row textarea { resize: vertical; min-height: 40px; }
+        .ros-row input:focus, .ros-row textarea:focus { border-color: var(--prod-accent); }
+        .btn-add { background: transparent; border: 1px dashed var(--prod-accent); color: var(--prod-accent); width: 100%; padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top:10px; }
+        .btn-add:hover { background: rgba(179,0,255,0.1); }
+        
+        .crew-card { background: #111; border-left: 3px solid var(--prod-accent); padding: 15px; border-radius: 0 8px 8px 0; margin-bottom: 10px; display:flex; flex-direction:column; gap:10px; transition: 0.3s; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
+        .m-content { background: #111; padding: 30px; border-radius: 20px; width: 400px; border: 1px solid var(--prod-accent); }
+        .m-content select, .m-content input { width: 100%; padding: 12px; margin: 10px 0; background: #222; border: 1px solid #444; color: white; border-radius: 10px; outline: none; }
+
+        .print-only { display: none; }
+
+        /* MAGIA CSS PARA PDF EN DARK MODE */
+        @media print {
+            @page { margin: 1cm; }
+            body { background: #000 !important; color: #fff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .ros-panel { box-shadow: none; border: 1px solid #555; }
+            .ros-row { background: #111 !important; border: 1px solid #333 !important; grid-template-columns: 100px 1.5fr 2fr 2fr !important; }
+            .ros-row input, .ros-row textarea { background: transparent !important; border: none !important; color: white !important; resize: none; overflow: visible; }
+            .info-panel { border: 1px solid #333 !important; }
+            .crew-card { padding: 10px !important; border-left: 2px solid #555 !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container animate-up">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div>
+                <button class="secondary no-print" onclick="location.href='prod-index.html'" style="margin-bottom:15px; font-size:10px;">← VOLVER AL HUB</button>
+                <h1 id="sTitle" style="margin:0; font-weight:900; color:white;">CARGANDO...</h1>
+                <p id="sDate" style="color:var(--prod-accent); font-weight:bold; letter-spacing:2px; font-size:12px;"></p>
+            </div>
+            <div class="no-print" style="display:flex; gap:15px;">
+                <button onclick="window.print()" style="background:transparent; color:white; border:1px solid #555; padding:15px 20px; border-radius:12px; font-weight:bold; cursor:pointer;">🖨️ PDF</button>
+                <button onclick="saveROS()" style="background:var(--prod-accent); color:white; border:none; padding:15px 30px; border-radius:12px; font-weight:900; cursor:pointer;">💾 GUARDAR ESCALETA</button>
+            </div>
+        </header>
+
+        <div class="grid-layout">
+            <div class="info-panel">
+                <h3 style="color:var(--prod-accent); font-size:12px; letter-spacing:2px; border-bottom:1px solid #333; padding-bottom:10px; margin-top:0;">CREW TÉCNICO</h3>
+                <p class="no-print" style="font-size:10px; color:gray; line-height:1.4;">Si un técnico sirve en varias reuniones con roles distintos, añádelo varias veces y selecciona el horario de cada una.</p>
+                <div id="prodTeamList" style="margin-top:15px;"></div>
+                <button class="btn-add no-print" onclick="openCrewModal()" style="padding:10px; font-size:11px;">+ ASIGNAR AL CREW</button>
+
+                <h3 style="color:gray; font-size:12px; letter-spacing:2px; border-bottom:1px solid #333; padding-bottom:10px; margin-top:40px;">BANDA Y CANCIONES</h3>
+                <div id="teamList" style="font-size:13px; color:#aaa; line-height:1.8; margin-top:10px;"></div>
+                <div id="songList" style="display:flex; flex-direction:column; gap:10px; margin-top:20px;"></div>
+            </div>
+
+            <div class="ros-panel">
+                <h2 style="margin-top:0; color:var(--prod-accent); display:flex; justify-content:space-between; align-items:center;">
+                    RUN OF SERVICE
+                    <span class="no-print" style="font-size:10px; background:#b300ff33; padding:5px 10px; border-radius:8px; color:white;">VISTA MODO TELEVISIÓN</span>
+                </h2>
+                
+                <div style="display:grid; grid-template-columns: 100px 1.5fr 2fr 2fr 50px; gap:15px; margin-bottom:10px; padding:0 15px;">
+                    <label style="font-size:10px; color:gray; font-weight:bold;">HORA</label>
+                    <label style="font-size:10px; color:gray; font-weight:bold;">ACTIVIDAD</label>
+                    <label style="font-size:10px; color:gray; font-weight:bold;">CABINA (Audio/Luces)</label>
+                    <label style="font-size:10px; color:gray; font-weight:bold;">VIDEO (Pantallas/Cam)</label>
+                </div>
+
+                <div id="rosContainer"></div>
+                <button class="btn-add no-print" onclick="addRosRow()">+ AGREGAR BLOQUE DE TIEMPO</button>
+
+                <div style="margin-top: 50px; border-top: 1px solid #333; padding-top: 20px;">
+                    <h3 style="color:var(--prod-accent); font-size:12px; letter-spacing:2px; margin-bottom:10px;">📝 BITÁCORA DE VUELO (POST-MORTEM)</h3>
+                    <textarea id="postMortemNotes" rows="4" placeholder="Anota aquí fallas técnicas, felicitaciones o ajustes para el próximo domingo..." style="width:100%; background:#111; color:white; border:1px solid #333; padding:15px; border-radius:12px; outline:none; font-family:inherit; resize:vertical;"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA AÑADIR AL CREW RAPIDO -->
+    <div id="crewModal" class="modal no-print">
+        <div class="m-content">
+            <h3 style="color:white; margin-top:0; font-weight:900;">AÑADIR TÉCNICO AL ROSTER</h3>
+            <label style="font-size:10px; color:var(--prod-accent); font-weight:bold;">SELECCIONA AL ELEMENTO</label>
+            <select id="crewSelect"></select>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button onclick="addCrewToMemory()" style="flex:2; background:var(--prod-accent); color:white; border:none; border-radius:10px; padding:15px; font-weight:900; cursor:pointer;">AÑADIR</button>
+                <button onclick="closeCrewModal()" style="flex:1; background:#333; color:white; border:none; border-radius:10px; cursor:pointer;">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem("token");
+        const urlParams = new URLSearchParams(window.location.search);
+        const setId = urlParams.get('id');
+
+        if (!token || !setId) window.location.href = "prod-index.html";
+
+        let currentProdTeam = [];
+        let availableTechs = [];
+        let currentTimeSlots = ["Todas"];
+
+        const rolesOptions = ["Audio", "Switcher", "ProPresenter", "Arena", "Iluminación", "Video", "Cámaras", "Contents", "Full", "Director"];
+
+        async function loadSetlist() {
+            try {
+                const userRes = await fetch("/users", { headers: { "Authorization": `Bearer ${token}` } });
+                const allUsers = await userRes.json();
+                availableTechs = allUsers.filter(u => u.ministry === "Produccion");
+
+                const setRes = await fetch("/setlists", { headers: { "Authorization": `Bearer ${token}` } });
+                const setlists = await setRes.json();
+                const s = setlists.find(x => x._id === setId);
+
+                if (s) {
+                    if (s.timeSlots && s.timeSlots.length > 0) currentTimeSlots = s.timeSlots;
+
+                    document.getElementById("sTitle").innerText = s.name.toUpperCase();
+                    document.getElementById("sDate").innerText = `${s.date} | ${s.timeSlots.join(" - ")}`;
+                    document.getElementById("postMortemNotes").value = s.postMortemNotes || "";
+
+                    document.getElementById("teamList").innerHTML = s.team.map(t => 
+                        `<div><span style="color:white; font-weight:bold;">${t.name}</span> - ${t.role}</div>`
+                    ).join('') || "<i>No hay músicos.</i>";
+
+                    document.getElementById("songList").innerHTML = s.songs.map((item, index) => {
+                        const song = item.songId;
+                        return `
+                        <div style="background:#111; padding:8px; border-radius:8px; border:1px solid #222;">
+                            <div style="font-weight:bold; color:white; font-size:12px;">${index + 1}. ${song.name}</div>
+                        </div>`;
+                    }).join('');
+
+                    if (s.runOfService && s.runOfService.length > 0) {
+                        s.runOfService.forEach(r => addRosRow(r.time, r.activity, r.cabinaNotes, r.videoNotes));
+                    } else {
+                        addRosRow("10:00", "Bienvenida", "", "");
+                    }
+
+                    currentProdTeam = s.prodTeam || [];
+                    renderCrew();
+                }
+            } catch (err) { alert("Error al cargar la información."); }
+        }
+
+        function renderCrew() {
+            const container = document.getElementById("prodTeamList");
+            if (currentProdTeam.length === 0) {
+                container.innerHTML = "<p style='color:gray; font-size:11px;'>No hay técnicos asignados.</p>";
+                return;
+            }
+
+            container.innerHTML = currentProdTeam.map((member, index) => {
+                const roleOpts = rolesOptions.map(r => `<option value="${r}" ${member.role === r ? 'selected' : ''}>${r}</option>`).join('');
+                
+                // Mapear los horarios del Setlist al selector
+                const timeOpts = currentTimeSlots.map(t => `<option value="${t}" ${member.timeSlot === t ? 'selected' : ''}>${t}</option>`).join('');
+                
+                const isRecibe = member.attendance === 'Recibe';
+                const statusColor = isRecibe ? 'gray' : '#00ff88';
+
+                return `
+                <div class="crew-card" style="opacity: ${isRecibe ? '0.5' : '1'};">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-weight:bold; color:white; font-size:14px;">${member.name}</div>
+                        <button class="no-print" onclick="removeCrew(${index})" style="background:none; border:none; color:#ff1a1a; cursor:pointer; font-size:16px; padding:0;">✕</button>
+                    </div>
+                    
+                    <div class="no-print" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+                        <select onchange="updateCrew(${index}, 'timeSlot', this.value)" style="background:#222; color:white; border:1px solid #444; border-radius:6px; padding:8px; font-size:11px; outline:none; font-weight:bold;">
+                            ${timeOpts}
+                            <option value="Todas" ${member.timeSlot === 'Todas' ? 'selected' : ''}>Todas</option>
+                        </select>
+                        <select onchange="updateCrew(${index}, 'role', this.value)" style="background:#222; color:var(--prod-accent); border:1px solid #444; border-radius:6px; padding:8px; font-size:11px; outline:none; font-weight:bold;">
+                            ${roleOpts}
+                        </select>
+                        <select onchange="updateCrew(${index}, 'attendance', this.value)" style="background:#222; color:${statusColor}; border:1px solid #444; border-radius:6px; padding:8px; font-size:11px; outline:none; font-weight:bold;">
+                            <option value="Sirve" ${member.attendance === 'Sirve' ? 'selected' : ''}>✅ SIRVE</option>
+                            <option value="Recibe" ${member.attendance === 'Recibe' ? 'selected' : ''}>🛋️ RECIBE</option>
+                        </select>
+                    </div>
+                    
+                    <input class="no-print" type="text" placeholder="Foco / Nota (Opcional)" value="${member.focus || ''}" onchange="updateCrew(${index}, 'focus', this.value)" style="background:#222; color:white; border:1px solid #444; border-radius:6px; padding:8px; font-size:11px; width:100%; box-sizing:border-box; outline:none;">
+                    
+                    <div class="print-only">
+                        <span style="color:var(--prod-accent); font-size:10px; font-weight:bold;">[${member.timeSlot}]</span> | <span style="font-weight:bold; font-size:10px;">${member.role}</span> | <span style="font-size:10px; color:${statusColor};">${member.attendance || 'Sirve'}</span>
+                        ${member.focus ? `<div style="font-size:10px; color:#aaa; margin-top:3px;"><i>🎯 ${member.focus}</i></div>` : ''}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function updateCrew(index, field, value) {
+            currentProdTeam[index][field] = value;
+            if(field === 'attendance') renderCrew(); 
+        }
+
+        function openCrewModal() {
+            const select = document.getElementById("crewSelect");
+            select.innerHTML = availableTechs.map(t => `<option value="${t._id}|${t.name}">${t.name}</option>`).join('');
+            document.getElementById("crewModal").style.display = "flex";
+        }
+
+        function closeCrewModal() { document.getElementById("crewModal").style.display = "none"; }
+
+        function addCrewToMemory() {
+            const selectVal = document.getElementById("crewSelect").value.split('|');
+            const newMember = {
+                memberId: selectVal[0],
+                name: selectVal[1],
+                role: "Audio", 
+                focus: "",
+                ready: false,
+                attendance: "Sirve",
+                timeSlot: currentTimeSlots[0] || "Todas" // Asigna el primer horario por defecto
+            };
+            currentProdTeam.push(newMember);
+            renderCrew();
+            closeCrewModal();
+        }
+
+        function removeCrew(index) {
+            currentProdTeam.splice(index, 1);
+            renderCrew();
+        }
+
+        function addRosRow(time = "", act = "", cab = "", vid = "") {
+            const div = document.createElement("div");
+            div.className = "ros-row";
+            div.innerHTML = `
+                <input type="text" class="r-time" value="${time}" placeholder="Hora">
+                <input type="text" class="r-act" value="${act}" placeholder="Actividad">
+                <textarea class="r-cab" rows="2" placeholder="Notas Audio/Luces">${cab}</textarea>
+                <textarea class="r-vid" rows="2" placeholder="Notas Video/Cam">${vid}</textarea>
+                <button class="no-print" onclick="this.parentElement.remove()" style="background:none; border:none; color:#ff1a1a; cursor:pointer; font-size:18px; padding-top:10px;">✕</button>
+            `;
+            document.getElementById("rosContainer").appendChild(div);
+            
+            div.querySelectorAll('textarea').forEach(el => {
+                el.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
+            });
+        }
+
+        async function saveROS() {
+            const rows = Array.from(document.querySelectorAll(".ros-row"));
+            const runOfService = rows.map(row => ({
+                time: row.querySelector(".r-time").value,
+                activity: row.querySelector(".r-act").value,
+                cabinaNotes: row.querySelector(".r-cab").value,
+                videoNotes: row.querySelector(".r-vid").value
+            }));
+
+            const postMortemNotes = document.getElementById("postMortemNotes").value;
+
+            try {
+                const res = await fetch(`/setlists/${setId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                    body: JSON.stringify({ runOfService, prodTeam: currentProdTeam, postMortemNotes }) 
+                });
+
+                if (res.ok) { alert("¡Escaleta y Crew guardados con éxito!"); } 
+                else { alert("Error al guardar."); }
+            } catch (err) { alert("Hubo un problema de red."); }
+        }
+
+        loadSetlist();
+    </script>
+</body>
+</html>

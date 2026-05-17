@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+  if (!localStorage.getItem("token")) {
+    window.location.href = "login.html";
+  }
+</script>
+<meta charset="UTF-8">
+<title>Control Banda</title>
+</head>
+<body>
+
+<h1>🎛️ Control Banda</h1>
+
+<button onclick="prev()">⬅</button>
+<button onclick="next()">➡</button>
+<button onclick="transpose(1)">+1</button>
+<button onclick="transpose(-1)">-1</button>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+
+const socket = io();
+
+let setlist = JSON.parse(localStorage.getItem("liveSetlist")) || [];
+
+socket.emit("band:setlist", setlist);
+
+function next(){ socket.emit("band:next"); }
+function prev(){ socket.emit("band:prev"); }
+function transpose(v){ socket.emit("band:transpose", v); }
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Setlists | C.A.N.</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        :root { --primary: #ff1a1a; }
+        body.kids-theme { --primary: #00d2ff; --primary-glow: rgba(0, 210, 255, 0.3); }
+
+        .set-card { 
+            background: var(--surface); 
+            border: 1px solid var(--border); 
+            border-radius: 20px; 
+            padding: 30px; 
+            margin-bottom: 30px; 
+            transition: 0.3s; 
+        }
+        .set-card:hover { border-color: var(--primary); }
+
+        .section-title { 
+            color: var(--primary); 
+            letter-spacing: 4px; 
+            font-size: 12px; 
+            font-weight: 900;
+            margin: 30px 0 15px 0; 
+            border-bottom: 1px solid var(--border); 
+            padding-bottom: 10px; 
+        }
+
+        .song-tag { background: rgba(255,255,255,0.05); padding: 5px 12px; border-radius: 6px; font-size: 11px; color: var(--text-dim); }
+        
+        .time-badge { background: rgba(255,26,26,0.1); color: var(--primary); padding: 5px 15px; border-radius: 8px; font-weight: bold; font-size: 12px; margin-right: 10px;}
+        
+        /* ESTILOS DEL EQUIPO Y ASISTENCIA */
+        .member-line { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 12px 15px; 
+            background: rgba(0,0,0,0.2); 
+            border-radius: 12px; 
+            margin-bottom: 8px; 
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .member-info strong { color: white; font-size: 14px; }
+        .member-info span { color: var(--primary); font-size: 11px; font-weight: bold; margin-left: 10px; text-transform: uppercase; }
+        
+        .att-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+        .att-tag { padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: bold; }
+        
+        .tag-sirve { background: rgba(255,26,26,0.2); color: #ff1a1a; border: 1px solid rgba(255,26,26,0.3); }
+        .tag-recibe { background: rgba(0,210,255,0.2); color: #00d2ff; border: 1px solid rgba(0,210,255,0.3); }
+        .tag-none { background: rgba(255,255,255,0.05); color: #888; border: 1px solid rgba(255,255,255,0.1); }
+
+        .action-btns { display: flex; gap: 10px; margin-top: 30px; }
+        .action-btns button { flex: 1; padding: 12px; font-size: 11px; }
+
+        #pdf-render-zone { display: none; background: white; color: black; padding: 40px; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <script>
+        const token = localStorage.getItem("token");
+        if (!token) window.location.href = "login.html";
+        const activeMin = localStorage.getItem("activeMinistry") || "Principal";
+        if(activeMin === "KIDS") document.body.classList.add("kids-theme");
+    </script>
+
+    <div class="container animate-up">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:50px;">
+            <button class="secondary" onclick="location.href='index.html'">← VOLVER</button>
+            <h1 style="margin:0; letter-spacing:4px; font-weight:900;">DIRECTORIO DE SERVICIOS</h1>
+            <button class="secondary" id="toggleArchived" onclick="toggleArchiveView()">VER ARCHIVADOS</button>
+        </header>
+
+        <div id="grid" style="display:grid; grid-template-columns: 1fr; gap:30px; max-width:800px; margin:0 auto;">
+            </div>
+    </div>
+
+    <div id="pdf-render-zone"></div>
+
+    <script>
+        const userData = JSON.parse(window.atob(token.split('.')[1]));
+        let showArchived = false;
+        let allSets = [];
+
+        async function load() {
+            try {
+                const res = await fetch("/setlists", { headers: { "Authorization": `Bearer ${token}` } });
+                allSets = await res.json();
+                render();
+            } catch(e) { console.error("Error cargando setlists:", e); }
+        }
+
+        function render() {
+            const grid = document.getElementById("grid");
+            grid.innerHTML = "";
+
+            // Filtramos por ministerio activo y por estado de archivo
+            const filteredSets = allSets.filter(s => s.ministry === activeMin && s.archived === showArchived);
+
+            if(filteredSets.length === 0) {
+                grid.innerHTML = `<p style="text-align:center; color:var(--text-dim); margin-top:50px;">No hay servicios ${showArchived ? 'archivados' : 'activos'}.</p>`;
+                return;
+            }
+
+            // Ordenamos del más reciente al más antiguo
+            filteredSets.sort((a,b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')));
+
+            filteredSets.forEach(s => {
+                // 1. Renderizar Horarios
+                const timesHtml = (s.timeSlots && s.timeSlots.length > 0) 
+                    ? s.timeSlots.map(t => `<span class="time-badge">${t}</span>`).join('') 
+                    : `<span class="time-badge">Horario no definido</span>`;
+
+                // 2. Renderizar Canciones
+                const songsHtml = s.songs.map((item, i) => {
+                    if(!item.songId) return `<div class="song-tag">Canción eliminada</div>`;
+                    return `<div class="song-tag" style="margin-bottom:8px; font-size:13px;">
+                        <span style="color:var(--primary); font-weight:bold; width:20px; display:inline-block;">${i+1}.</span> 
+                        <strong style="color:white;">${item.songId.name}</strong> 
+                        <span style="color:var(--text-dim); margin-left:10px;">(${item.setlistKey || item.songId.key})</span>
+                    </div>`;
+                }).join('');
+
+                // 3. Renderizar Equipo de forma Sincronizada
+                let teamHtml = "<p style='color:var(--text-dim); font-size:12px;'>No hay equipo asignado.</p>";
+                if(s.team && s.team.length > 0) {
+                    teamHtml = s.team.map(member => {
+                        let attendanceTags = "";
+                        
+                        // Si guardó asistencias detalladas, las mostramos
+                        if (member.attendance && Object.keys(member.attendance).length > 0) {
+                            for (const [time, status] of Object.entries(member.attendance)) {
+                                let tagClass = "tag-none";
+                                let icon = "✖️";
+                                let text = "No Asiste";
+                                
+                                if(status === "sirve") { tagClass = "tag-sirve"; icon = "🎸"; text = "Sirve"; }
+                                if(status === "recibe") { tagClass = "tag-recibe"; icon = "🙌"; text = "Recibe"; }
+                                
+                                attendanceTags += `<div class="att-tag ${tagClass}">${time}: ${text} ${icon}</div>`;
+                            }
+                        } else {
+                            // Compatibilidad con servicios viejos o sin horarios
+                            attendanceTags = `<div class="att-tag tag-sirve">Sirve 🎸 (Por defecto)</div>`;
+                        }
+
+                        return `
+                            <div class="member-line">
+                                <div class="member-info">
+                                    <strong>${member.name.toUpperCase()}</strong>
+                                    <span>${member.role || 'Músico'}</span>
+                                </div>
+                                <div class="att-tags">
+                                    ${attendanceTags}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Armar Tarjeta
+                const card = document.createElement("div");
+                card.className = "set-card";
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <h2 style="margin:0 0 10px 0; font-size:26px; font-weight:900; letter-spacing:1px; text-transform:uppercase;">${s.name}</h2>
+                            <p style="color:white; font-size:14px; font-weight:bold; letter-spacing:2px; margin-bottom:15px;">📅 ${s.date}</p>
+                            <div>${timesHtml}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            ${!s.archived ? `<button class="secondary" style="padding:8px 15px; font-size:11px;" onclick="archiveSet('${s._id}', true)">ARCHIVAR 🗃️</button>` 
+                                          : `<button class="secondary" style="padding:8px 15px; font-size:11px; border-color:var(--primary); color:var(--primary);" onclick="archiveSet('${s._id}', false)">RESTAURAR 🔄</button>`}
+                        </div>
+                    </div>
+
+                    <div class="section-title">ORDEN DEL SERVICIO</div>
+                    <div>${songsHtml}</div>
+
+                    <div class="section-title">EQUIPO ASIGNADO</div>
+                    <div>${teamHtml}</div>
+
+                    <div class="action-btns">
+                        <button onclick="editSet('${s._id}')" style="background:transparent; border:1px solid white; color:white;">EDITAR EN PLANIFICADOR ✏️</button>
+                        <button onclick="generatePDF('${s._id}')" style="background:var(--primary); color:white; border:none;">DESCARGAR PDF 📄</button>
+                        ${userData.role === 'Full Administrador' ? `<button class="secondary" style="border-color:#ff4d4d; color:#ff4d4d; max-width:60px;" onclick="deleteSet('${s._id}')">🗑️</button>` : ''}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        async function archiveSet(id, status) {
+            await fetch(`/setlists/${id}`, { 
+                method:"PUT", 
+                headers: { "Content-Type":"application/json", "Authorization": `Bearer ${token}` }, 
+                body: JSON.stringify({ archived: status })
+            });
+            load();
+        }
+
+        async function deleteSet(id) {
+            if(confirm("¿Estás seguro de que quieres eliminar este servicio de forma permanente?")) {
+                await fetch(`/setlists/${id}`, { method:"DELETE", headers: { "Authorization": `Bearer ${token}` } });
+                load();
+            }
+        }
+
+        function editSet(id) { window.location.href = `setlist.html?edit=${id}`; }
+
+        function toggleArchiveView() {
+            showArchived = !showArchived;
+            document.getElementById("toggleArchived").innerText = showArchived ? "VER ACTIVOS" : "VER ARCHIVADOS";
+            document.getElementById("toggleArchived").style.borderColor = showArchived ? "var(--primary)" : "rgba(255,255,255,0.2)";
+            render();
+        }
+
+        // LÓGICA DE PDF (Mantenida intacta)
+        function generatePDF(id) {
+            try {
+                const setlist = allSets.find(s => s._id === id);
+                if(!setlist) return;
+
+                let html = `
+                    <div style="text-align:center; border-bottom:3px solid black; padding-bottom:10px; margin-bottom:20px;">
+                        <h1 style="font-size:24px; margin:0;">${setlist.name.toUpperCase()}</h1>
+                        <h3 style="font-size:14px; margin:5px 0 0 0; color:#555;">FECHA: ${setlist.date} | HORARIOS: ${(setlist.timeSlots || []).join(' - ')}</h3>
+                    </div>
+                `;
+
+                if(setlist.team && setlist.team.length > 0) {
+                    html += `<div style="margin-bottom:20px; font-size:12px;"><strong>EQUIPO:</strong><br>`;
+                    setlist.team.forEach(t => {
+                        html += `• ${t.name.toUpperCase()} (${t.role})<br>`;
+                    });
+                    html += `</div>`;
+                }
+
+                setlist.songs.forEach((item, index) => {
+                    const song = item.songId;
+                    if(!song) return;
+                    html += `<div style="font-size:16px; font-weight:bold; margin-top:15px; color:#c00;">${index + 1}. ${song.name.toUpperCase()}</div>
+                             <div style="font-size:12px; color:#333; margin-bottom:10px;">Artista: ${song.artist} | Tono: <strong>${item.setlistKey || song.key}</strong></div>`;
+                    song.sections.forEach(sec => {
+                        const chordStr = Array.isArray(sec.chords) ? sec.chords.join(" - ") : sec.chords;
+                        html += `<div style="margin-bottom:5px; font-size:14px;">
+                                    <span style="font-weight:bold; text-transform:uppercase;">${sec.name}:</span>
+                                    <span style="font-family:monospace; font-weight:bold; margin-left:10px;">${chordStr}</span>
+                                 </div>`;
+                    });
+                });
+
+                const renderZone = document.getElementById('pdf-render-zone');
+                renderZone.innerHTML = html;
+                renderZone.style.display = 'block';
+
+                html2pdf().set({
+                    margin: 15, filename: `CAN_${setlist.name.replace(/ /g, '_')}_${setlist.date.replace(/\//g, '-')}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                }).from(renderZone).save().then(() => {
+                    renderZone.style.display = 'none'; renderZone.innerHTML = '';
+                });
+            } catch(e) { alert("Error al generar PDF."); }
+        }
+
+        load();
+    </script>
+</body>
+</html>

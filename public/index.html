@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>C.A.N. | Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body.kids-theme { --primary: #00d2ff; --primary-glow: rgba(0, 210, 255, 0.3); }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; margin-top: 50px; }
+        .nav-card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 40px 20px; text-align: center; cursor: pointer; transition: 0.3s; }
+        .nav-card:hover { border-color: var(--primary); transform: translateY(-5px); background: rgba(255,255,255,0.02); }
+        .nav-card i { font-size: 40px; display: block; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div id="welcome-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#050505; z-index:9999; display:flex; align-items:center; justify-content:center; transition:0.8s;">
+        <div id="w-frame" style="text-align:center; opacity:0; transform:scale(0.9); transition:1s;">
+            <img id="w-photo" src="" style="width:120px; height:120px; border-radius:50%; border:3px solid var(--primary); margin-bottom:20px; object-fit:cover;">
+            <h1 id="w-name" style="color:white; letter-spacing:8px; font-weight:900; opacity:0; transition:1s; text-transform:uppercase;"></h1>
+        </div>
+    </div>
+
+    <div class="container animate-up" id="main-content" style="opacity:0; transition:1s;">
+        <header style="display:flex; justify-content:space-between; align-items:center;">
+            <h1 style="margin:0; letter-spacing:4px; font-weight:900;">C.A.N. ENGINE</h1>
+            <button class="secondary" onclick="logout()">CERRAR SESIÓN</button>
+        </header>
+
+        <div class="dashboard-grid" id="mainMenu">
+            <div class="nav-card" onclick="location.href='overview.html'">
+                <i>🎵</i><h3 style="margin:0;">REPERTORIO</h3><p style="font-size:10px; color:gray;">Canciones y acordes</p>
+            </div>
+            <div class="nav-card" onclick="location.href='stage-select.html'">
+                <i>🎸</i><h3 style="margin:0;">STAGE LIVE</h3><p style="font-size:10px; color:gray;">Modo en vivo</p>
+            </div>
+            <div class="nav-card" onclick="location.href='directorio.html'">
+                <i>👥</i><h3 style="margin:0;">EQUIPO</h3><p style="font-size:10px; color:gray;">Directorio de la banda</p>
+            </div>
+            <div class="nav-card" onclick="location.href='profile.html'">
+                <i>⚙️</i><h3 style="margin:0;">MI PERFIL</h3><p style="font-size:10px; color:gray;">Configuración personal</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const activeMin = localStorage.getItem("activeMinistry") || "Principal";
+        if(activeMin === "KIDS") document.body.classList.add("kids-theme");
+
+        const token = localStorage.getItem("token");
+        if (!token) window.location.href = "login.html";
+
+        async function initDashboard() {
+            let userData = {};
+            try {
+                userData = JSON.parse(window.atob(token.split('.')[1]));
+                
+                // BLINDAJE INTELIGENTE ACTUALIZADO PARA MÚLTIPLES ÁREAS
+                if (userData.ministry === "Produccion") {
+                    if (userData.techBranch && userData.techBranch.includes("Audio")) {
+                        window.location.replace("audio-index.html"); // El Inge va a sus consolas
+                    } else {
+                        window.location.replace("prod-index.html"); // Los demás van al Hub General
+                    }
+                    return;
+                }
+            } catch(e) { logout(); }
+
+            try {
+                const res = await fetch("/profile", { headers: { "Authorization": `Bearer ${token}` } });
+                const userDb = await res.json();
+                const firstName = userDb.name ? userDb.name.split(' ')[0] : (userData.username || "Usuario");
+                document.getElementById("w-name").innerText = `HOLA, ${firstName}`;
+                document.getElementById("w-photo").src = userDb.photo || `https://ui-avatars.com/api/?name=${firstName}&background=111&color=fff`;
+            } catch (e) {
+                document.getElementById("w-name").innerText = "HOLA, " + (userData.username || "CARLOS").toUpperCase();
+            }
+
+            const grid = document.getElementById("mainMenu");
+            
+            if (userData.role === "Editor" || userData.role === "Full Administrador") {
+                grid.innerHTML += `
+                    <div class="nav-card" onclick="location.href='setlist.html'">
+                        <i>📅</i><h3 style="margin:0;">PLANIFICADOR</h3><p style="font-size:10px; color:gray;">Armar servicios</p>
+                    </div>`;
+            }
+            
+            if (userData.role === "Full Administrador") {
+                grid.innerHTML += `
+                    <div class="nav-card" onclick="location.href='admin.html'">
+                        <i>🛡️</i><h3 style="margin:0;">GESTIÓN</h3><p style="font-size:10px; color:gray;">Administrar usuarios</p>
+                    </div>
+                    <!-- PUERTA SECRETA A PRODUCCIÓN SOLO PARA ADMIN -->
+                    <div class="nav-card" onclick="location.href='prod-index.html'" style="border-color:#b300ff; background:rgba(179,0,255,0.05);">
+                        <i>🎛️</i><h3 style="margin:0; color:#b300ff;">PRODUCCIÓN</h3><p style="font-size:10px; color:gray;">Ir al Hub Técnico</p>
+                    </div>`;
+            }
+
+            setTimeout(() => {
+                document.getElementById("w-frame").style.opacity = "1";
+                document.getElementById("w-frame").style.transform = "scale(1)";
+                document.getElementById("w-name").style.opacity = "1";
+            }, 200);
+
+            setTimeout(() => {
+                document.getElementById("welcome-overlay").style.opacity = "0";
+                document.getElementById("main-content").style.opacity = "1";
+                setTimeout(() => document.getElementById("welcome-overlay").style.display = "none", 800);
+            }, 2000);
+        }
+
+        function logout() { localStorage.clear(); window.location.href = "login.html"; }
+        initDashboard();
+    </script>
+</body>
+</html>

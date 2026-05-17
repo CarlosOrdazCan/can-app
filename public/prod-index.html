@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Producción Hub | C.A.N.</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        :root { --prod-accent: #b300ff; }
+        body { background: #050505; background-image: radial-gradient(circle at 50% 0%, rgba(179,0,255,0.05) 0%, transparent 60%); }
+        .prod-card { background: rgba(15,15,20,0.8); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 30px; margin-bottom: 25px; transition: 0.3s; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .prod-card:hover { border-color: var(--prod-accent); box-shadow: 0 10px 30px rgba(179,0,255,0.1); }
+        .min-badge { font-size: 10px; font-weight: bold; padding: 4px 10px; border-radius: 6px; letter-spacing: 2px; text-transform: uppercase; }
+        .btn-prod { background: transparent; border: 1px solid var(--prod-accent); color: var(--prod-accent); padding: 12px 20px; border-radius: 12px; font-weight: 900; font-size: 11px; cursor: pointer; transition: 0.3s; letter-spacing: 1px; }
+        .btn-prod:hover { background: var(--prod-accent); color: white; }
+        .btn-live { background: var(--prod-accent); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 900; font-size: 11px; cursor: pointer; transition: 0.3s; letter-spacing: 1px; }
+        .btn-live:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(179,0,255,0.3); }
+    </style>
+</head>
+<body>
+    <script>
+        const token = localStorage.getItem("token");
+        if (!token) window.location.href = "login.html";
+        let isAdmin = false;
+        try {
+            const userData = JSON.parse(window.atob(token.split('.')[1]));
+            isAdmin = (userData.role === "Full Administrador");
+        } catch(e) { window.location.href = "login.html"; }
+    </script>
+
+    <div class="container animate-up">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:50px;">
+            <div>
+                <h1 style="margin:0; letter-spacing:4px; font-weight:900; color:white;">TECHNICAL <span style="color:var(--prod-accent);">HUB</span></h1>
+                <p style="color:gray; font-size:12px; letter-spacing:2px; margin-top:5px;">CONTROL DE PRODUCCIÓN Y BROADCAST</p>
+            </div>
+            <div style="display:flex; gap:15px;">
+                <button id="btnBackAlabanza" class="secondary" onclick="location.href='index.html'" style="display:none; font-size:11px;">← VOLVER A ALABANZA</button>
+                <button class="secondary" onclick="localStorage.clear(); window.location.href='login.html';" style="font-size:11px;">CERRAR SESIÓN</button>
+            </div>
+        </header>
+
+        <div>
+            <h2 style="font-size:14px; color:var(--prod-accent); letter-spacing:3px; margin-bottom:20px;">SERVICIOS PROGRAMADOS</h2>
+            <div id="services-container">
+                <p style="color:gray; text-align:center;">Cargando cronograma...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (isAdmin) document.getElementById("btnBackAlabanza").style.display = "block";
+
+        async function loadServices() {
+            try {
+                const res = await fetch("/setlists", { headers: { "Authorization": `Bearer ${token}` } });
+                const setlists = await res.json();
+                const container = document.getElementById("services-container");
+                
+                const activeSets = setlists.filter(s => !s.archived).reverse();
+                
+                if (activeSets.length === 0) {
+                    container.innerHTML = `<p style="color:gray; text-align:center;">No hay servicios programados por Alabanza aún.</p>`;
+                    return;
+                }
+
+                container.innerHTML = activeSets.map(s => {
+                    const minColor = s.ministry === "KIDS" ? "#00d2ff" : (s.ministry === "Hibrido" ? "#ffcc00" : "#ff1a1a");
+                    const minBg = s.ministry === "KIDS" ? "rgba(0,210,255,0.2)" : (s.ministry === "Hibrido" ? "rgba(255,204,0,0.2)" : "rgba(255,26,26,0.2)");
+                    const rosCount = s.runOfService ? s.runOfService.length : 0;
+                    const rosBadge = rosCount > 0 ? `<span style="color:#00ff88; font-size:11px;">✓ Escaleta Lista (${rosCount} bloques)</span>` : `<span style="color:orange; font-size:11px;">⚠️ Escaleta Pendiente</span>`;
+
+                    return `
+                    <div class="prod-card">
+                        <div>
+                            <span class="min-badge" style="color:${minColor}; background:${minBg};">${s.ministry}</span>
+                            <h3 style="margin:10px 0 5px 0; font-size:22px;">${s.name}</h3>
+                            <p style="margin:0; color:gray; font-size:13px;">🗓️ ${s.date} | ⏱️ ${s.timeSlots.join(" - ")}</p>
+                            <div style="margin-top:10px; font-weight:bold;">${rosBadge}</div>
+                        </div>
+                        <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                            <button class="btn-prod" onclick="location.href='prod-planner.html?id=${s._id}'">📋 ARMAR ESCALETA (ROS)</button>
+                            <button class="btn-live" onclick="location.href='prod-live.html?id=${s._id}'">🔴 ENTRAR A CABINA</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch (err) {
+                document.getElementById("services-container").innerHTML = `<p style="color:red; text-align:center;">Error cargando datos.</p>`;
+            }
+        }
+        
+        loadServices();
+    </script>
+</body>
+</html>

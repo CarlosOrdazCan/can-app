@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Servicios | C.A.N.</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body.kids-theme { --primary: #00d2ff; }
+        .set-card { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; background: var(--surface); padding: 35px; border-radius: 24px; border: 1px solid var(--border); margin-bottom: 30px; }
+        .set-header { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 15px; }
+        .info-block { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; border: 1px solid #222; }
+        .section-title { font-size: 10px; color: var(--primary); font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px; display: block; }
+        .song-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
+        .song-row:last-child { border-bottom: none; }
+        .btn-live { padding: 15px 25px; border-radius: 12px; font-weight: 900; cursor: pointer; border: none; font-size: 12px; transition: 0.3s; }
+        .btn-musicos { background: var(--primary); color: white; }
+        .kids-theme .btn-musicos { color: black; }
+        .btn-cantantes { background: #fff; color: #000; }
+        
+        /* Botones de Gestión de Setlist */
+        .btn-archive { background: #333; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-size: 10px; font-weight: 900; cursor: pointer; margin-right: 10px; }
+        .btn-delete { background: transparent; color: #ff1a1a; border: 1px solid #ff1a1a; padding: 10px 15px; border-radius: 8px; font-size: 10px; font-weight: 900; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <script>
+        const activeMin = localStorage.getItem("activeMinistry") || "Principal";
+        if(activeMin === "KIDS") document.body.classList.add("kids-theme");
+    </script>
+
+    <div class="container animate-up">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <button class="secondary" onclick="location.href='index.html'">← VOLVER</button>
+            <h1 style="margin:0; letter-spacing:4px; font-weight:900;">SERVICIOS <span style="color:var(--primary); font-size: 16px;">${activeMin}</span></h1>
+            <button onclick="location.href='setlist.html'" style="background:var(--primary); color:white; border:none; padding:12px 25px; border-radius:12px; font-weight:bold;">+ NUEVO SERVICIO</button>
+        </header>
+
+        <div style="text-align: center; margin-bottom: 40px;">
+            <button id="toggleArchiveBtn" class="secondary" onclick="toggleArchiveView()" style="padding: 10px 20px; border-radius: 30px;">VER ARCHIVADOS</button>
+        </div>
+
+        <div id="setsContainer"></div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem("token");
+        if (!token) window.location.href = "login.html";
+        let allSets = [];
+        let showingArchived = false;
+
+        async function loadSets() {
+            const res = await fetch("/setlists", { headers: { "Authorization": `Bearer ${token}` } });
+            allSets = await res.json();
+            render();
+        }
+
+        function render() {
+            const container = document.getElementById("setsContainer");
+            
+            // Filtramos por el ministerio activo (Principal o KIDS) y el estado de archivo
+            const filteredSets = allSets.filter(s => (s.ministry || 'Principal') === activeMin && Boolean(s.archived) === showingArchived);
+
+            if (filteredSets.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:gray; margin-top:50px;">No hay servicios ${showingArchived ? 'archivados' : 'activos'} aquí.</p>`;
+                return;
+            }
+
+            container.innerHTML = filteredSets.map(s => {
+                let totalTime = 0;
+                
+                const songsHtml = s.songs.map(item => {
+                    if(!item.songId) return '';
+                    const song = item.songId;
+                    totalTime += parseInt(song.duration || 5);
+                    return `
+                        <div class="song-row">
+                            <div>
+                                <div style="font-weight:900; font-size:14px;">${song.name.toUpperCase()}</div>
+                                <div style="font-size:10px; color:gray;">${song.tempo || '--'} BPM</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="color:var(--primary); font-weight:bold;">${item.setlistKey || song.key}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="set-card">
+                        <div class="set-header">
+                            <div>
+                                <h2 style="margin:0; font-size:24px; font-weight:900; text-transform:uppercase;">${s.name}</h2>
+                                <p style="color:gray; font-size:12px; margin:5px 0 0 0;">📅 ${s.date} | ⏱️ TOTAL: ${totalTime} MINUTOS</p>
+                            </div>
+                            <div>
+                                <button class="btn-archive" onclick="toggleSetArchive('${s._id}', ${!s.archived})">${s.archived ? 'RESTAURAR SET' : 'ARCHIVAR SET'}</button>
+                                <button class="btn-delete" onclick="deleteSet('${s._id}')">BORRAR</button>
+                            </div>
+                        </div>
+
+                        <div class="info-block">
+                            <span class="section-title">CANCIONES</span>
+                            ${songsHtml || '<p style="color:gray; font-size:12px;">Sin canciones</p>'}
+                        </div>
+
+                        <div class="info-block" style="display:flex; flex-direction:column; justify-content:space-between;">
+                            <div>
+                                <span class="section-title">ADMINISTRAR</span>
+                                <p style="color:gray; font-size:12px;">Edita la configuración o entra al modo en vivo para dirigir al equipo.</p>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
+                                <button class="btn-live btn-musicos" onclick="location.href='stage.html?id=${s._id}'">🎸 VISTA MÚSICOS</button>
+                                <button class="btn-live btn-cantantes" onclick="location.href='lyrics-stage.html?id=${s._id}'">🎤 VISTA CANTANTES</button>
+                                <button class="secondary" onclick="location.href='setlist.html?id=${s._id}'" style="padding:15px; border-radius:12px;">✏️ EDITAR SETLIST</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleArchiveView() {
+            showingArchived = !showingArchived;
+            document.getElementById("toggleArchiveBtn").innerText = showingArchived ? "VER ACTIVOS" : "VER ARCHIVADOS";
+            document.getElementById("toggleArchiveBtn").style.borderColor = showingArchived ? "var(--primary)" : "#444";
+            document.getElementById("toggleArchiveBtn").style.color = showingArchived ? "var(--primary)" : "white";
+            render();
+        }
+
+        async function toggleSetArchive(id, newState) {
+            await fetch(`/setlists/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+                body: JSON.stringify({ archived: newState })
+            });
+            loadSets();
+        }
+
+        async function deleteSet(id) {
+            if(confirm("¿Seguro que deseas eliminar este Setlist de forma permanente? Esta acción no se puede deshacer.")) {
+                await fetch(`/setlists/${id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
+                loadSets();
+            }
+        }
+
+        loadSets();
+    </script>
+</body>
+</html>
