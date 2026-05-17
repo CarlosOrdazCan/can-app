@@ -9,13 +9,27 @@
         body { background: #050505; background-image: radial-gradient(circle at 50% 0%, rgba(0,255,136,0.05) 0%, transparent 60%); }
         .mixer-section { background: rgba(255,255,255,0.02); border: 1px solid #222; border-radius: 20px; padding: 30px; margin-bottom: 30px; }
         .mixer-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px; }
-        .patch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
-        .patch-card { background: #0a0a0c; border: 1px solid #333; border-radius: 12px; padding: 15px; display: flex; align-items: flex-start; gap: 15px; cursor: pointer; transition: 0.3s; }
-        .patch-card:hover { border-color: var(--audio-accent); background: rgba(0,255,136,0.05); transform: translateY(-3px); }
-        .p-photo { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid #444; }
-        .p-info { flex-grow: 1; min-width: 0; }
-        .p-name { font-weight: 900; color: white; font-size: 14px; margin-bottom: 4px; text-transform: uppercase; }
-        .p-inst { font-size: 10px; color: gray; }
+        .patch-grid { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; padding-bottom: 15px; -webkit-overflow-scrolling: touch; }
+        .patch-grid::-webkit-scrollbar { height: 8px; }
+        .patch-grid::-webkit-scrollbar-track { background: #050505; }
+        .patch-grid::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+        .channel-strip { flex: 0 0 120px; background: #0a0a0c; border: 1px solid #222; border-radius: 8px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; overflow: hidden; position: relative; }
+        .channel-strip:hover { border-color: var(--audio-accent); background: #111; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,255,136,0.1); }
+        
+        .strip-routing { background: #111; width: 100%; padding: 10px 5px; text-align: center; border-bottom: 1px solid #222; font-size: 9px; font-family: monospace; color: gray; min-height: 55px; display: flex; flex-direction: column; justify-content: center; }
+        
+        .fader-section { height: 180px; width: 100%; position: relative; background: #050505; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid #222; }
+        .fader-track { width: 6px; height: 140px; background: #000; border: 1px solid #222; border-radius: 3px; position: relative; }
+        .fader-cap { width: 34px; height: 48px; background: linear-gradient(to bottom, #444, #111); border: 2px solid #555; border-radius: 4px; position: absolute; left: 50%; transform: translateX(-50%); top: 70%; box-shadow: 0 10px 15px rgba(0,0,0,0.9); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: top 0.2s; }
+        .fader-cap::after { content: ''; width: 24px; height: 3px; background: var(--audio-accent); border-radius: 2px; box-shadow: 0 0 8px var(--audio-accent); }
+        .channel-strip:hover .fader-cap { top: 60%; /* Efecto al hacer hover */ border-color: var(--audio-accent); }
+        
+        .fader-marks { position: absolute; left: 65%; height: 140px; display: flex; flex-direction: column; justify-content: space-between; font-size: 8px; color: #444; font-family: monospace; pointer-events: none; }
+        
+        .scribble-strip { background: var(--audio-accent); width: 100%; padding: 8px 5px; text-align: center; color: black; font-weight: 900; font-size: 11px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 1px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2); }
+        .p-photo { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid #222; margin: 10px 0 5px 0; }
+        .p-inst { font-size: 9px; color: gray; margin-bottom: 10px; text-transform: uppercase; font-weight: bold; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
         .m-content { background: #111; padding: 30px; border-radius: 20px; width: 450px; max-height:90vh; overflow-y:auto; border: 1px solid var(--audio-accent); box-shadow: 0 10px 40px rgba(0,255,136,0.1); text-align: center; }
@@ -41,6 +55,7 @@
                 <p style="color:gray; font-size:12px; letter-spacing:2px; margin-top:5px;">DIRECTORIO Y CABINA</p>
             </div>
             <div style="display:flex; gap:15px;">
+                <button class="secondary" onclick="location.href='stage-select.html'" style="font-size:11px; background:var(--audio-accent); color:black; border:none; font-weight:bold;">📊 VER CHARTS / ACORDES</button>
                 <button id="btnBackAdmin" class="secondary" onclick="location.href='index.html'" style="display:none; font-size:11px;">← VOLVER AL DASHBOARD</button>
                 <button class="secondary" onclick="localStorage.clear(); window.location.href='login.html';" style="font-size:11px;">CERRAR SESIÓN</button>
             </div>
@@ -137,34 +152,42 @@
             const photo = u.photo || `https://ui-avatars.com/api/?name=${u.name}&background=111&color=fff`;
             
             // GENERAR LA MINI-TABLA DE RUTEO PARA LA TARJETA
-            let patchListHTML = "<div style='font-size:10px; color:gray; margin-top:5px;'>Sin ruteo asignado</div>";
+            let patchListHTML = "<div style='color:gray;'>Sin patch</div>";
+            let activeCh = "-";
+            let activeAux = "-";
+            
             if (Array.isArray(u.audioChannels) && u.audioChannels.length > 0) {
+                const c = u.audioChannels[0]; // Mostrar el principal en el top del strip
+                activeCh = c.channel;
+                activeAux = c.auxLine;
                 patchListHTML = `
-                <div style="background:rgba(0,0,0,0.5); padding:8px; border-radius:8px; margin-top:10px; border:1px solid #222;">
-                    <div style="display:grid; grid-template-columns: 1fr 40px 40px; gap:5px; font-size:8px; color:gray; font-weight:bold; border-bottom:1px solid #333; padding-bottom:4px; margin-bottom:4px;">
-                        <div>FUENTE</div><div>CH</div><div style="color:#00d2ff;">AUX</div>
-                    </div>
-                    ${u.audioChannels.map(c => `
-                        <div style="display:grid; grid-template-columns: 1fr 40px 40px; gap:5px; font-size:11px; margin-bottom:3px;">
-                            <div style="color:#ddd; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.inputName}</div>
-                            <div style="color:var(--audio-accent); font-family:monospace; font-weight:bold;">${c.channel}</div>
-                            <div style="color:#00d2ff; font-family:monospace; font-weight:bold;">${c.auxLine}</div>
-                        </div>
-                    `).join('')}
-                </div>`;
+                    <div style="color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${c.inputName || 'MIX'}</div>
+                    <div style="color:var(--audio-accent); font-weight:bold; font-size:12px; margin-top:3px;">CH ${activeCh}</div>
+                    <div style="color:#00d2ff; font-weight:bold; font-size:9px; margin-top:2px;">AUX ${activeAux}</div>
+                `;
             } else if (typeof u.audioChannels === 'string' && u.audioChannels !== "") {
-                // Por si queda algún dato viejo guardado como texto
-                patchListHTML = `<div style="color:var(--audio-accent); font-family:monospace; font-size:11px; margin-top:5px;">${u.audioChannels}</div>`;
+                patchListHTML = `<div style="color:var(--audio-accent);">${u.audioChannels}</div>`;
             }
 
+            // Posición visual inicial del fader (entre 60% y 80%) para que se mueva al hacer hover
+            const faderPos = Math.floor(Math.random() * 20) + 60;
+
             return `
-            <div class="patch-card" onclick="openModal('${u._id}')">
-                <img class="p-photo" src="${photo}">
-                <div class="p-info">
-                    <div class="p-name">${u.name}</div>
-                    <div class="p-inst">${u.instrument || "N/A"}</div>
-                    ${patchListHTML}
+            <div class="channel-strip" onclick="openModal('${u._id}')">
+                <div class="strip-routing">${patchListHTML}</div>
+                
+                <div class="fader-section">
+                    <div class="fader-track">
+                        <div class="fader-cap" style="top: ${faderPos}%;"></div>
+                    </div>
+                    <div class="fader-marks">
+                        <span>+10</span><span>0</span><span>-10</span><span>-30</span><span>-inf</span>
+                    </div>
                 </div>
+                
+                <div class="scribble-strip">${u.name.split(' ')[0]}</div>
+                <img class="p-photo" src="${photo}">
+                <div class="p-inst">${u.instrument || "N/A"}</div>
             </div>`;
         }
 
