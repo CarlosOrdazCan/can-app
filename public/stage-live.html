@@ -190,10 +190,14 @@
                     <button id="btnViewCantante" class="v-btn" onclick="setViewMode('cantante')">🎤 LETRAS</button>
                     <button id="btnViewAcordes" class="v-btn" onclick="setViewMode('acordes')">🎸 ACORDES Y LETRA</button>
                     <button id="btnViewSoloAcordes" class="v-btn" onclick="setViewMode('solo-acordes')">🎹 SOLO ACORDES</button>
-                    <button id="btnViewChart" class="v-btn" onclick="setViewMode('chart')">📊 CHART</button>
                 </div>
 
                 <div class="zoom-controls">
+                    <!-- Botones de Transposición -->
+                    <button class="z-btn" onclick="transposeLive(-1)" style="color:var(--chart-accent); border-color:var(--chart-accent);">♭</button>
+                    <button class="z-btn" onclick="transposeLive(1)" style="color:var(--chart-accent); border-color:var(--chart-accent);">♯</button>
+                    <div style="width:10px;"></div>
+                    <!-- Botones de Zoom -->
                     <button class="z-btn" onclick="changeZoom(-2)">A-</button>
                     <button class="z-btn" onclick="changeZoom(2)">A+</button>
                 </div>
@@ -217,6 +221,7 @@
 
     </div>
 
+    <script src="musicUtils.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const token = localStorage.getItem("token");
@@ -231,6 +236,7 @@
         let isDirector = false;
         let currentLiveSections = [];
         let activeSongId = null;
+        let liveTargetKey = null;
 
         const socket = io();
         
@@ -301,12 +307,22 @@
             if(mode === 'cantante') document.getElementById("btnViewCantante").classList.add("active");
             if(mode === 'acordes') document.getElementById("btnViewAcordes").classList.add("active");
             if(mode === 'solo-acordes') document.getElementById("btnViewSoloAcordes").classList.add("active");
-            if(mode === 'chart') document.getElementById("btnViewChart").classList.add("active");
             
             if (reloadChart && activeSongIndex !== -1) openChart(activeSongIndex);
         }
 
+        function transposeLive(steps) {
+            if (activeSongIndex === -1) return;
+            const item = currentSetlist.songs[activeSongIndex];
+            if (!item || !item.songId) return;
+            
+            if (!liveTargetKey || liveTargetKey === '-') liveTargetKey = item.setlistKey || item.songId.key || "C";
+            liveTargetKey = transposeChord(liveTargetKey, steps);
+            openChart(activeSongIndex); 
+        }
+
         function openChart(index) {
+            const previousIndex = activeSongIndex;
             activeSongIndex = index;
             renderNavigation(); 
             
@@ -321,18 +337,21 @@
                 return;
             }
             
-            const displayKey = item.setlistKey || song.key || '-';
+            // Si acabamos de cambiar de canción, resetear el tono vivo
+            if (previousIndex !== index) {
+                liveTargetKey = item.setlistKey || song.key || '-';
+            }
             
             document.getElementById("viewerHeader").style.display = "flex";
             document.getElementById("vTitle").innerText = song.name;
-            document.getElementById("vMeta").innerText = `TONO: ${displayKey}  |  BPM: ${song.tempo || '-'}`;
+            document.getElementById("vMeta").innerText = `TONO: ${liveTargetKey}  |  BPM: ${song.tempo || '-'}`;
 
             const renderArea = document.getElementById("renderArea");
             renderArea.style.fontSize = currentZoom + "px";
 
             activeSongId = song._id;
             // Si no estamos modificando la estructura actual (o es nueva), reiniciar
-            if (!currentLiveSections.length || activeSongIndex !== index) {
+            if (!currentLiveSections.length || previousIndex !== index) {
                 currentLiveSections = [...(song.sections || [])];
             }
 
@@ -347,8 +366,10 @@
             }
             renderArea.style.fontSize = currentZoom + "px";
 
-            // --- EL MOTOR INTELIGENTE (3 VISTAS + DUAL REGEX) ---
+            // --- EL MOTOR INTELIGENTE (TRANSPOSITOR + DUAL REGEX) ---
             if (currentLiveSections && currentLiveSections.length > 0) {
+                const steps = typeof getStepsBetween === 'function' && song.key && liveTargetKey ? getStepsBetween(song.key, liveTargetKey) : 0;
+                
                 renderArea.innerHTML = currentLiveSections.map(sec => {
                     const safeLyrics = sec.lyrics || '';
                     // Detecta corchetes [G] o paréntesis (G)
@@ -366,11 +387,14 @@
                     else if (currentViewMode === 'acordes') {
                         let chordsStr = "";
                         if (sec.chords && sec.chords.length > 0 && sec.chords[0] !== "") {
-                            chordsStr = sec.chords.join(' - ');
+                            chordsStr = sec.chords.map(c => typeof transposeChord === 'function' ? transposeChord(c, steps) : c).join(' - ');
                         } else if (hasChordPro) {
                             let matches = safeLyrics.match(/[\[\(](.*?)[\]\)]/g);
                             if(matches) {
-                                chordsStr = matches.map(m => m.replace(/[\[\(\)\]]/g, '')).join(' - ');
+                                chordsStr = matches.map(m => {
+                                    let chord = m.replace(/[\[\(\)\]]/g, '');
+                                    return typeof transposeChord === 'function' ? transposeChord(chord, steps) : chord;
+                                }).join(' - ');
                             }
                         }
                         let chordsHTML = chordsStr ? `<div class="old-chords">${chordsStr}</div>` : '';
@@ -380,26 +404,19 @@
                     else if (currentViewMode === 'solo-acordes') {
                         let chordsStr = "";
                         if (sec.chords && sec.chords.length > 0 && sec.chords[0] !== "") {
-                            chordsStr = sec.chords.join(' - ');
+                            chordsStr = sec.chords.map(c => typeof transposeChord === 'function' ? transposeChord(c, steps) : c).join(' - ');
                         } else if (hasChordPro) {
                             let matches = safeLyrics.match(/[\[\(](.*?)[\]\)]/g);
                             if(matches) {
-                                chordsStr = matches.map(m => m.replace(/[\[\(\)\]]/g, '')).join(' - ');
+                                chordsStr = matches.map(m => {
+                                    let chord = m.replace(/[\[\(\)\]]/g, '');
+                                    return typeof transposeChord === 'function' ? transposeChord(chord, steps) : chord;
+                                }).join(' - ');
                             }
                         }
                         // Renderizar más grandes y evidentes
                         let chordsHTML = chordsStr ? `<div class="old-chords" style="font-size: 1.5em; padding: 20px; border-color: var(--chart-accent);">${chordsStr}</div>` : '<div style="color:gray; font-size:12px;">(Sin acordes registrados)</div>';
                         contentHTML = chordsHTML;
-                    }
-                    // VISTA 4: CHART (Flotante)
-                    else if (currentViewMode === 'chart') {
-                        if (hasChordPro) {
-                            let parsedLyrics = safeLyrics.replace(/[\[\(](.*?)[\]\)]/g, '<span class="c-chord"><span>$1</span></span>');
-                            contentHTML = `<div class="chart-lyric">${parsedLyrics}</div>`;
-                        } else {
-                            let chordsHTML = sec.chords && sec.chords.length > 0 && sec.chords[0] !== "" ? `<div class="old-chords">${sec.chords.join(' - ')}</div>` : '';
-                            contentHTML = `${chordsHTML}<div class="chart-lyric">${safeLyrics || '<span style="color:#555;">[Instrumental]</span>'}</div>`;
-                        }
                     }
 
                     return `
