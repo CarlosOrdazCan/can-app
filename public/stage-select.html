@@ -16,6 +16,7 @@
         .btn-musicos { background: var(--primary); color: white; }
         .kids-theme .btn-musicos { color: black; }
         .btn-cantantes { background: #fff; color: #000; }
+        .btn-charts { background: #b300ff; color: white; }
         
         /* Botones de Gestión de Setlist */
         .btn-archive { background: #333; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-size: 10px; font-weight: 900; cursor: pointer; margin-right: 10px; }
@@ -111,7 +112,8 @@
                             <div style="display:flex; flex-direction:column; gap:10px; margin-top:20px;">
                                 <button class="btn-live btn-musicos" onclick="location.href='stage.html?id=${s._id}'">🎸 VISTA MÚSICOS</button>
                                 <button class="btn-live btn-cantantes" onclick="location.href='lyrics-stage.html?id=${s._id}'">🎤 VISTA CANTANTES</button>
-                                <button class="secondary" onclick="location.href='setlist.html?id=${s._id}'" style="padding:15px; border-radius:12px;">✏️ EDITAR SETLIST</button>
+                                <button class="btn-live btn-charts" onclick="location.href='stage-live.html?id=${s._id}'">📊 VISTA CHARTS (Letras y Acordes)</button>
+                                <button class="secondary" onclick="location.href='setlist.html?id=${s._id}'" style="padding:15px; border-radius:12px; margin-top:10px;">✏️ EDITAR SETLIST</button>
                             </div>
                         </div>
                     </div>
