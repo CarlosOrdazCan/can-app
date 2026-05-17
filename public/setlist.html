@@ -95,7 +95,7 @@
                     </div>
                     <div>
                         <label style="font-size:10px; color:gray; font-weight:bold;">HORARIOS (Separados por coma)</label>
-                        <input type="text" id="sTimes" class="input-box" placeholder="Ej: 9:00, 11:30, 1:30">
+                        <input type="text" id="sTimes" class="input-box" placeholder="Ej: 9:00, 11:30, 1:30" oninput="renderActiveTeam()">
                     </div>
                 </div>
 
@@ -269,13 +269,48 @@
 
         function renderActiveTeam() {
             const container = document.getElementById("currentTeam");
-            container.innerHTML = activeTeam.map((item, index) => `
-                <div class="item-row">
-                    <div class="item-name">${item.name}</div>
-                    <input type="text" class="item-input" style="width:150px; color:#fff;" value="${item.role}" placeholder="Instrumento" onchange="activeTeam[${index}].role = this.value">
-                    <button class="btn-icon btn-del" onclick="activeTeam.splice(${index}, 1); renderActiveTeam();">✕</button>
+            const timesRaw = document.getElementById("sTimes").value;
+            const timeSlots = timesRaw ? timesRaw.split(',').map(s => s.trim()).filter(s => s) : [];
+
+            container.innerHTML = activeTeam.map((item, index) => {
+                if (!item.attendance) item.attendance = {};
+                
+                const attendanceHTML = timeSlots.map(time => {
+                    const status = item.attendance[time] || "Sirve";
+                    return `
+                        <div style="display:inline-flex; flex-direction:column; align-items:center; margin-right:5px;">
+                            <span style="font-size:9px; color:gray;">${time}</span>
+                            <select class="item-input" style="width:75px; font-size:10px; padding:4px;" onchange="activeTeam[${index}].attendance['${time}'] = this.value">
+                                <option value="Sirve" ${status === 'Sirve' ? 'selected' : ''}>Sirve</option>
+                                <option value="Recibe" ${status === 'Recibe' ? 'selected' : ''}>Recibe</option>
+                                <option value="No asiste" ${status === 'No asiste' ? 'selected' : ''}>No asiste</option>
+                            </select>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                <div class="item-row" style="flex-wrap:wrap; gap:10px;">
+                    <div class="item-name" style="min-width:140px; flex-grow:0;">${item.name}</div>
+                    <select class="item-input" style="width:130px; color:#fff;" onchange="activeTeam[${index}].role = this.value">
+                        <option value="Voz Principal" ${item.role === 'Voz Principal' ? 'selected' : ''}>Voz Principal</option>
+                        <option value="Coros" ${item.role === 'Coros' ? 'selected' : ''}>Coros</option>
+                        <option value="Piano" ${item.role === 'Piano' ? 'selected' : ''}>Piano</option>
+                        <option value="Sintes" ${item.role === 'Sintes' ? 'selected' : ''}>Sintes</option>
+                        <option value="Batería" ${item.role === 'Batería' ? 'selected' : ''}>Batería</option>
+                        <option value="Bajo" ${item.role === 'Bajo' ? 'selected' : ''}>Bajo</option>
+                        <option value="Guitarra Eléctrica" ${item.role === 'Guitarra Eléctrica' ? 'selected' : ''}>Gtr Eléctrica</option>
+                        <option value="Guitarra Acústica" ${item.role === 'Guitarra Acústica' ? 'selected' : ''}>Gtr Acústica</option>
+                        <option value="Director Musical" ${item.role === 'Director Musical' ? 'selected' : ''}>Director MD</option>
+                        <option value="${item.role}" ${!['Voz Principal','Coros','Piano','Sintes','Batería','Bajo','Guitarra Eléctrica','Guitarra Acústica','Director Musical'].includes(item.role) ? 'selected' : 'hidden'}>${item.role}</option>
+                    </select>
+                    <div style="display:flex; flex-grow:1; justify-content:flex-end;">
+                        ${attendanceHTML}
+                        <button class="btn-icon btn-del" style="margin-left:10px; height:fit-content; align-self:center;" onclick="activeTeam.splice(${index}, 1); renderActiveTeam();">✕</button>
+                    </div>
                 </div>
-            `).join('') || "<p style='color:gray; font-size:11px; font-style:italic;'>Aún no hay músicos asignados.</p>";
+                `;
+            }).join('') || "<p style='color:gray; font-size:11px; font-style:italic;'>Aún no hay músicos asignados.</p>";
         }
 
         // --- EL MOTOR HÍBRIDO DE CHART PREVIEW ---
@@ -362,6 +397,21 @@
             if (!e.target.closest('.search-area')) {
                 document.getElementById("songResults").style.display = "none";
                 document.getElementById("userResults").style.display = "none";
+            }
+        });
+
+        // Tarea C: Precarga de horarios fijos
+        document.getElementById("sDate").addEventListener("change", function() {
+            const dateVal = this.value;
+            if (dateVal) {
+                const d = new Date(dateVal + 'T00:00:00');
+                const day = d.getDay();
+                if (day === 0) { // Domingo
+                    document.getElementById("sTimes").value = "09:00, 11:00, 13:00";
+                } else if (day === 3) { // Miércoles
+                    document.getElementById("sTimes").value = "20:00";
+                }
+                renderActiveTeam();
             }
         });
 
