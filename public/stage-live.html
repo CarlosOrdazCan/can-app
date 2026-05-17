@@ -151,8 +151,9 @@
             if (payload.role === "Director Musical") isDirector = true;
         } catch(e){}
 
-        // El dispositivo recordará si el músico prefiere Chart, Acordes o Letras
-        let currentViewMode = localStorage.getItem("stageViewMode") || "chart";
+        // El dispositivo recordará si el músico prefiere Chart, Acordes o Letras. 
+        // Si no hay preferencia guardada, el predeterminado será 'acordes' (Acordes y Letra clásica).
+        let currentViewMode = localStorage.getItem("stageViewMode") || "acordes";
 
         async function loadStage() {
             setViewMode(currentViewMode, false);
@@ -164,13 +165,21 @@
 
                 if (currentSetlist) {
                     document.getElementById("setTitle").innerText = currentSetlist.name;
-                    document.getElementById("setDate").innerText = `${currentSetlist.date} | ${currentSetlist.timeSlots.join(" - ")}`;
+                    document.getElementById("setDate").innerText = `${currentSetlist.date || ''} | ${(currentSetlist.timeSlots || []).join(" - ")}`;
                     renderNavigation();
+                    
+                    // Abrir automáticamente la primera canción si no hay ninguna activa
+                    if (activeSongIndex === -1 && currentSetlist.songs && currentSetlist.songs.length > 0) {
+                        openChart(0);
+                    }
                 } else {
                     alert("No se encontró el Setlist.");
                     window.location.href = "stage-select.html";
                 }
-            } catch (err) { alert("Error de red."); }
+            } catch (err) { 
+                console.error(err);
+                alert("Error de red."); 
+            }
         }
 
         function renderNavigation() {
