@@ -55,7 +55,14 @@
             <button class="secondary" onclick="location.href='prod-index.html'" style="padding:8px 15px; font-size:10px;">← SALIR</button>
             <div class="live-badge">ON AIR</div>
         </div>
-        <div class="clock" id="liveClock">00:00:00</div>
+        <div style="display:flex; flex-direction:column; align-items:center;">
+            <div class="clock" id="liveClock" style="color:var(--prod-accent);">00:00:00</div>
+            <div style="display:flex; gap:5px; margin-top:5px;" class="no-print">
+                <button onclick="startStopwatch()" style="background:#00ff88; color:black; border:none; border-radius:4px; font-size:9px; padding:2px 5px; font-weight:bold; cursor:pointer;">▶ INICIAR</button>
+                <button onclick="pauseStopwatch()" style="background:#ffcc00; color:black; border:none; border-radius:4px; font-size:9px; padding:2px 5px; font-weight:bold; cursor:pointer;">⏸ PAUSA</button>
+                <button onclick="resetStopwatch()" style="background:#ff1a1a; color:white; border:none; border-radius:4px; font-size:9px; padding:2px 5px; font-weight:bold; cursor:pointer;">⏹ RESET</button>
+            </div>
+        </div>
         <div id="sDateTitle" style="color:gray; font-weight:bold; font-size:12px; letter-spacing:2px; text-transform:uppercase;">CARGANDO...</div>
     </header>
 
@@ -81,6 +88,7 @@
         </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         const token = localStorage.getItem("token");
         const urlParams = new URLSearchParams(window.location.search);
@@ -91,10 +99,45 @@
         if (!token || !setId) window.location.href = "prod-index.html";
         try { currentUser = JSON.parse(window.atob(token.split('.')[1])); } catch(e) {}
 
-        setInterval(() => {
-            const now = new Date();
-            document.getElementById("liveClock").innerText = now.toLocaleTimeString('es-MX', { hour12: false });
-        }, 1000);
+        const socket = io();
+        socket.on('liveStructureChange', (data) => {
+            if (currentSetlist && currentSetlist.songs) {
+                const item = currentSetlist.songs.find(i => i.songId && i.songId._id === data.songId);
+                if (item) {
+                    item.songId.sections = data.sections; 
+                    renderLyrics();
+                }
+            }
+        });
+
+        let stopwatchTimer = null;
+        let stopwatchSeconds = 0;
+
+        function formatStopwatch(ts) {
+            const h = Math.floor(ts / 3600);
+            const m = Math.floor((ts % 3600) / 60);
+            const s = ts % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function startStopwatch() {
+            if (!stopwatchTimer) {
+                stopwatchTimer = setInterval(() => {
+                    stopwatchSeconds++;
+                    document.getElementById("liveClock").innerText = formatStopwatch(stopwatchSeconds);
+                }, 1000);
+            }
+        }
+
+        function pauseStopwatch() {
+            if (stopwatchTimer) { clearInterval(stopwatchTimer); stopwatchTimer = null; }
+        }
+
+        function resetStopwatch() {
+            pauseStopwatch();
+            stopwatchSeconds = 0;
+            document.getElementById("liveClock").innerText = formatStopwatch(stopwatchSeconds);
+        }
 
         async function loadLiveView() {
             try {
@@ -163,24 +206,29 @@
                     document.getElementById("rosContainer").innerHTML = rosHTML;
 
                     // --- GENERAR LETRAS ---
-                    let lyricsHTML = "";
-                    if (currentSetlist.songs && currentSetlist.songs.length > 0) {
-                        currentSetlist.songs.forEach((item, index) => {
-                            const song = item.songId;
-                            lyricsHTML += `<div class="song-item"><div class="song-title"><span>${index + 1}. ${song.name}</span><span style="color:var(--prod-accent);">BPM: ${song.tempo || '--'}</span></div>`;
-                            if (song.sections) {
-                                song.sections.forEach(sec => {
-                                    if (sec.lyrics && sec.lyrics.trim() !== "") {
-                                        lyricsHTML += `<div class="lyric-section"><div class="lyric-name">${sec.name.toUpperCase()}</div><div class="lyric-text">${sec.lyrics}</div></div>`;
-                                    }
-                                });
-                            }
-                            lyricsHTML += `</div>`;
-                        });
-                    } else { lyricsHTML = "<p style='color:gray; font-size:12px; text-align:center;'>No hay canciones.</p>"; }
-                    document.getElementById("lyricsContainer").innerHTML = lyricsHTML;
+                    renderLyrics();
                 }
             } catch (err) { console.error("Error cargando la vista", err); }
+        }
+
+        function renderLyrics() {
+            let lyricsHTML = "";
+            if (currentSetlist.songs && currentSetlist.songs.length > 0) {
+                currentSetlist.songs.forEach((item, index) => {
+                    const song = item.songId;
+                    if(!song) return;
+                    lyricsHTML += `<div class="song-item"><div class="song-title"><span>${index + 1}. ${song.name}</span><span style="color:var(--prod-accent);">BPM: ${song.tempo || '--'}</span></div>`;
+                    if (song.sections) {
+                        song.sections.forEach(sec => {
+                            if (sec.lyrics && sec.lyrics.trim() !== "") {
+                                lyricsHTML += `<div class="lyric-section"><div class="lyric-name">${sec.name.toUpperCase()}</div><div class="lyric-text">${sec.lyrics}</div></div>`;
+                            }
+                        });
+                    }
+                    lyricsHTML += `</div>`;
+                });
+            } else { lyricsHTML = "<p style='color:gray; font-size:12px; text-align:center;'>No hay canciones.</p>"; }
+            document.getElementById("lyricsContainer").innerHTML = lyricsHTML;
         }
 
         async function syncCrewStatus() {

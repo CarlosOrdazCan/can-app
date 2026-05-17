@@ -110,6 +110,15 @@
             </div>
             
             <div class="chart-content">
+                <div id="directorPanel" style="display:none; background:#111; padding:15px; border-radius:10px; margin-bottom:20px; border:1px solid var(--chart-accent);">
+                    <div style="font-size:10px; color:var(--chart-accent); font-weight:bold; margin-bottom:10px;">PANEL DE DIRECTOR: MODIFICAR ESTRUCTURA EN VIVO</div>
+                    <div id="directorBtns" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+                    <div style="margin-top:15px; display:flex; gap:10px;">
+                        <button onclick="popLiveSection()" style="background:transparent; color:#ff1a1a; border:1px solid #ff1a1a; border-radius:6px; padding:5px 10px; font-size:11px; font-weight:bold; cursor:pointer;">↺ DESHACER ÚLTIMO</button>
+                        <button onclick="resetLiveStructure()" style="background:#222; color:white; border:none; border-radius:6px; padding:5px 10px; font-size:11px; cursor:pointer;">REINICIAR ESTRUCTURA</button>
+                    </div>
+                </div>
+
                 <div id="renderArea">
                     <div class="empty-stage">SELECCIONA UNA CANCIÓN DEL SETLIST<br><span style="font-size:12px; font-weight:normal; color:gray; margin-top:10px;">Tu preferencia de vista se guardará automáticamente.</span></div>
                 </div>
@@ -118,6 +127,7 @@
 
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         const token = localStorage.getItem("token");
         const urlParams = new URLSearchParams(window.location.search);
@@ -128,7 +138,18 @@
         let currentSetlist = null;
         let activeSongIndex = -1;
         let currentZoom = 22; 
+        let isDirector = false;
+        let currentLiveSections = [];
+        let activeSongId = null;
+
+        const socket = io();
         
+        // Decodificar token para ver si es Director
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            if (payload.role === "Director Musical") isDirector = true;
+        } catch(e){}
+
         // El dispositivo recordará si el músico prefiere Chart, Acordes o Letras
         let currentViewMode = localStorage.getItem("stageViewMode") || "chart";
 
@@ -199,9 +220,28 @@
             const renderArea = document.getElementById("renderArea");
             renderArea.style.fontSize = currentZoom + "px";
 
+            activeSongId = song._id;
+            // Si no estamos modificando la estructura actual (o es nueva), reiniciar
+            if (!currentLiveSections.length || activeSongIndex !== index) {
+                currentLiveSections = [...(song.sections || [])];
+            }
+
+            if (isDirector) {
+                document.getElementById("directorPanel").style.display = "block";
+                const btnsDiv = document.getElementById("directorBtns");
+                if (song.sections) {
+                    btnsDiv.innerHTML = song.sections.map((sec, idx) => 
+                        `<button onclick="addLiveSection(${index}, ${idx})" style="background:#222; color:white; border:1px solid #444; border-radius:6px; padding:8px 12px; font-size:12px; font-weight:bold; cursor:pointer;">+ ${sec.name}</button>`
+                    ).join('');
+                }
+            }
+
+            const renderArea = document.getElementById("renderArea");
+            renderArea.style.fontSize = currentZoom + "px";
+
             // --- EL MOTOR INTELIGENTE (3 VISTAS + DUAL REGEX) ---
-            if (song.sections && song.sections.length > 0) {
-                renderArea.innerHTML = song.sections.map(sec => {
+            if (currentLiveSections && currentLiveSections.length > 0) {
+                renderArea.innerHTML = currentLiveSections.map(sec => {
                     // Detecta corchetes [G] o paréntesis (G)
                     let hasChordPro = /[\[\(].*?[\]\)]/.test(sec.lyrics);
                     
@@ -249,6 +289,33 @@
             }
             
             document.querySelector('.chart-content').scrollTop = 0;
+        }
+
+        // --- FUNCIONES DEL DIRECTOR ---
+        function addLiveSection(songIdx, secIdx) {
+            const originalSong = currentSetlist.songs[songIdx].songId;
+            const sec = originalSong.sections[secIdx];
+            if (sec) {
+                currentLiveSections.push(sec);
+                socket.emit('liveStructureChange', { songId: originalSong._id, sections: currentLiveSections });
+                openChart(songIdx); // Re-render
+            }
+        }
+
+        function popLiveSection() {
+            if (currentLiveSections.length > 0) {
+                currentLiveSections.pop();
+                const song = currentSetlist.songs[activeSongIndex].songId;
+                socket.emit('liveStructureChange', { songId: song._id, sections: currentLiveSections });
+                openChart(activeSongIndex);
+            }
+        }
+
+        function resetLiveStructure() {
+            const song = currentSetlist.songs[activeSongIndex].songId;
+            currentLiveSections = [...(song.sections || [])];
+            socket.emit('liveStructureChange', { songId: song._id, sections: currentLiveSections });
+            openChart(activeSongIndex);
         }
 
         function changeZoom(val) {

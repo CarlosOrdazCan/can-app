@@ -5,11 +5,22 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
 const http = require("http");
+const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
+
 const PORT = process.env.PORT || 3000;
 const SECRET = "can-naucalpan-2026-secure-key";
+
+io.on('connection', (socket) => {
+    console.log('Nuev@ conectad@ a Socket.io:', socket.id);
+    socket.on('liveStructureChange', (data) => {
+        // Retransmitimos a todos los clientes (especialmente cabina de Producción)
+        socket.broadcast.emit('liveStructureChange', data);
+    });
+});
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); 
