@@ -168,9 +168,10 @@
                     document.getElementById("setDate").innerText = `${currentSetlist.date || ''} | ${(currentSetlist.timeSlots || []).join(" - ")}`;
                     renderNavigation();
                     
-                    // Abrir automáticamente la primera canción si no hay ninguna activa
+                    // Abrir automáticamente la primera canción válida si no hay ninguna activa
                     if (activeSongIndex === -1 && currentSetlist.songs && currentSetlist.songs.length > 0) {
-                        openChart(0);
+                        const firstValidIdx = currentSetlist.songs.findIndex(s => s.songId != null);
+                        if(firstValidIdx !== -1) openChart(firstValidIdx);
                     }
                 } else {
                     alert("No se encontró el Setlist.");
@@ -221,7 +222,16 @@
             renderNavigation(); 
             
             const item = currentSetlist.songs[index];
-            const song = item.songId;
+            const song = item ? item.songId : null;
+            
+            if (!song) {
+                document.getElementById("vTitle").innerText = "CANCIÓN ELIMINADA";
+                document.getElementById("vMeta").innerText = "-";
+                document.getElementById("renderArea").innerHTML = "<div class='empty-stage' style='color:gray; font-size:16px;'>Esta canción fue eliminada de la base de datos.</div>";
+                document.getElementById("viewerHeader").style.display = "flex";
+                return;
+            }
+            
             const displayKey = item.setlistKey || song.key || '-';
             
             document.getElementById("viewerHeader").style.display = "flex";
