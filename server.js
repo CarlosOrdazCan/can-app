@@ -45,7 +45,8 @@ const User = mongoose.model("User", new mongoose.Schema({
     photo: String,
     phone: String,
     bio: String,
-    audioChannels: { type: mongoose.Schema.Types.Mixed, default: [] } 
+    audioChannels: { type: mongoose.Schema.Types.Mixed, default: [] },
+    personalMix: { type: [Number], default: [] }
 }));
 
 const Song = mongoose.model("Song", new mongoose.Schema({

@@ -32,9 +32,28 @@
         .p-inst { font-size: 9px; color: gray; margin-bottom: 10px; text-transform: uppercase; font-weight: bold; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
-        .m-content { background: #111; padding: 30px; border-radius: 20px; width: 450px; max-height:90vh; overflow-y:auto; border: 1px solid var(--audio-accent); box-shadow: 0 10px 40px rgba(0,255,136,0.1); text-align: center; }
+        .m-content { background: #111; padding: 30px; border-radius: 20px; width: 85%; max-width: 1000px; max-height:90vh; overflow-y:auto; border: 1px solid var(--audio-accent); box-shadow: 0 10px 40px rgba(0,255,136,0.1); text-align: center; }
         .m-content input { width: 100%; background: #050505; border: 1px solid #333; color: white; border-radius: 8px; outline: none; font-family: monospace; }
         .m-content input:focus { border-color: var(--audio-accent); }
+        
+        /* Personal Mix Faders */
+        .mix-container { display: flex; overflow-x: auto; gap: 10px; padding: 20px 10px; background: #050505; border-radius: 12px; border: 1px solid #222; margin-top: 15px; margin-bottom: 20px; -webkit-overflow-scrolling: touch; }
+        .mix-container::-webkit-scrollbar { height: 10px; }
+        .mix-container::-webkit-scrollbar-track { background: #111; }
+        .mix-container::-webkit-scrollbar-thumb { background: var(--audio-accent); border-radius: 5px; }
+        .mix-strip { display: flex; flex-direction: column; align-items: center; min-width: 45px; }
+        .mix-ch { font-size: 10px; color: gray; font-weight: bold; margin-bottom: 10px; }
+        .mix-val { font-size: 9px; color: var(--audio-accent); font-family: monospace; margin-top: 10px; background: #111; padding: 2px 5px; border-radius: 4px; }
+        
+        input[type=range][orient=vertical] {
+            writing-mode: bt-lr; /* IE */
+            -webkit-appearance: slider-vertical; /* WebKit */
+            width: 15px;
+            height: 150px;
+            background: #222;
+            outline: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -86,25 +105,41 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDICIÓN MULTIPLE -->
+    <!-- MODAL DE EDICIÓN MULTIPLE Y MEZCLA -->
     <div id="patchModal" class="modal">
         <div class="m-content">
-            <img id="mPhoto" src="" style="width:70px; height:70px; border-radius:50%; border:2px solid var(--audio-accent); margin-bottom:10px; object-fit:cover;">
-            <h3 id="mName" style="color:white; margin:0; font-weight:900;">NOMBRE</h3>
-            <p id="mInst" style="color:gray; font-size:11px; margin-top:5px;">Instrumento</p>
+            <div style="display: flex; gap: 20px; text-align: left; align-items: center; margin-bottom: 20px;">
+                <img id="mPhoto" src="" style="width:80px; height:80px; border-radius:50%; border:2px solid var(--audio-accent); object-fit:cover;">
+                <div>
+                    <h3 id="mName" style="color:white; margin:0; font-weight:900; font-size:24px;">NOMBRE</h3>
+                    <p id="mInst" style="color:gray; font-size:12px; margin-top:5px; text-transform:uppercase;">Instrumento</p>
+                </div>
+            </div>
             
-            <label style="font-size:10px; color:var(--audio-accent); font-weight:bold; display:block; margin-top:20px; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">ASIGNACIÓN DE CANALES Y MONITORES</label>
-            
-            <!-- CONTENEDOR DINAMICO DE FILAS -->
-            <div id="mPatchContainer"></div>
-            
-            <button onclick="addPatchRow()" style="background:transparent; border:1px dashed var(--audio-accent); color:var(--audio-accent); width:100%; padding:10px; border-radius:8px; cursor:pointer; margin-top:10px; font-weight:bold;">+ AGREGAR LÍNEA</button>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; text-align: left;">
+                <!-- PANEL DE RUTEO (PATCH) -->
+                <div style="background: #0a0a0c; border: 1px solid #222; border-radius: 12px; padding: 15px;">
+                    <label style="font-size:10px; color:white; font-weight:bold; display:block; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">ASIGNACIÓN (RUTEO)</label>
+                    <div id="mPatchContainer"></div>
+                    <button onclick="addPatchRow()" style="background:transparent; border:1px dashed #444; color:gray; width:100%; padding:10px; border-radius:8px; cursor:pointer; margin-top:10px; font-weight:bold; font-size:10px;">+ AGREGAR LÍNEA</button>
+                </div>
+
+                <!-- PANEL DE IN-EARS (MEZCLA) -->
+                <div style="background: #0a0a0c; border: 1px solid #222; border-radius: 12px; padding: 15px; overflow: hidden;">
+                    <label style="font-size:10px; color:var(--audio-accent); font-weight:bold; display:block; margin-bottom:5px;">MEZCLADORA IN-EAR PERSONAL (48 CANALES)</label>
+                    <div style="font-size:9px; color:gray; margin-bottom:10px;">Mueve los faders para ajustar la mezcla del monitor de este músico.</div>
+                    
+                    <div class="mix-container" id="mMixContainer">
+                        <!-- Se llenará con JS -->
+                    </div>
+                </div>
+            </div>
 
             <input type="hidden" id="mUserId">
 
             <div style="display:flex; gap:10px; margin-top:30px;">
-                <button onclick="savePatch()" style="flex:2; background:var(--audio-accent); color:black; border:none; border-radius:10px; padding:15px; font-weight:900; cursor:pointer;">GUARDAR RUTEO</button>
-                <button onclick="closeModal()" style="flex:1; background:#333; color:white; border:none; border-radius:10px; cursor:pointer;">CANCELAR</button>
+                <button onclick="saveUserAudioData()" style="flex:2; background:var(--audio-accent); color:black; border:none; border-radius:10px; padding:15px; font-weight:900; cursor:pointer;">GUARDAR CAMBIOS (RUTEO Y MEZCLA)</button>
+                <button onclick="closeModal()" style="flex:1; background:#333; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold;">CANCELAR</button>
             </div>
         </div>
     </div>
@@ -198,55 +233,88 @@
             document.getElementById("mInst").innerText = u.instrument || "Sin instrumento";
             document.getElementById("mPhoto").src = u.photo || `https://ui-avatars.com/api/?name=${u.name}&background=111&color=fff`;
             
-            const container = document.getElementById("mPatchContainer");
-            container.innerHTML = "";
-            
-            // Si ya tiene arreglos, creamos sus filas
+            // RUTEO (PATCH LIST)
+            const patchContainer = document.getElementById("mPatchContainer");
+            patchContainer.innerHTML = "";
             if (Array.isArray(u.audioChannels) && u.audioChannels.length > 0) {
                 u.audioChannels.forEach(c => addPatchRow(c.inputName, c.channel, c.auxLine));
             } else if (typeof u.audioChannels === 'string' && u.audioChannels !== "") {
-                addPatchRow(u.audioChannels, "", ""); // Migrar texto viejo
+                addPatchRow(u.audioChannels, "", "");
             } else {
-                addPatchRow(); // Fila vacía inicial
+                addPatchRow(); 
             }
 
+            // MEZCLA PERSONAL (48 FADERS)
+            const mixContainer = document.getElementById("mMixContainer");
+            mixContainer.innerHTML = "";
+            
+            // Si el usuario no tiene mezcla guardada, iniciamos con 48 canales en 0
+            const personalMix = (u.personalMix && u.personalMix.length === 48) 
+                ? u.personalMix 
+                : Array(48).fill(0);
+                
+            let fadersHTML = "";
+            for(let i = 0; i < 48; i++) {
+                const val = personalMix[i];
+                // Convertiremos el valor (-100 a +10, o 0 a 100) en el rango deseado.
+                // Usaremos un rango de 0 a 100 visualmente, donde 0 es -inf y 100 es +10.
+                fadersHTML += `
+                <div class="mix-strip">
+                    <div class="mix-ch">CH ${i+1}</div>
+                    <input type="range" class="mix-fader" orient="vertical" min="0" max="100" value="${val}" oninput="updateFaderVal(this, ${i})">
+                    <div class="mix-val" id="mVal_${i}">${val}</div>
+                </div>`;
+            }
+            mixContainer.innerHTML = fadersHTML;
+
             document.getElementById("patchModal").style.display = "flex";
+        }
+        
+        function updateFaderVal(el, index) {
+            document.getElementById(`mVal_${index}`).innerText = el.value;
         }
 
         function addPatchRow(inst = "", ch = "", aux = "") {
             const div = document.createElement("div");
             div.className = "patch-input-row";
-            div.style = "display:grid; grid-template-columns: 1fr 70px 70px 30px; gap:5px; margin-bottom:8px; align-items:center;";
+            div.style = "display:grid; grid-template-columns: 1fr 60px 60px 25px; gap:5px; margin-bottom:8px; align-items:center;";
             div.innerHTML = `
-                <input type="text" class="pi-inst" placeholder="Ej: Voz Lead" value="${inst}" style="margin:0; padding:10px; font-size:12px;">
-                <input type="text" class="pi-ch" placeholder="CH 1" value="${ch}" style="margin:0; padding:10px; font-size:12px; color:var(--audio-accent); text-align:center;">
-                <input type="text" class="pi-aux" placeholder="Aux 5" value="${aux}" style="margin:0; padding:10px; font-size:12px; color:#00d2ff; text-align:center;">
-                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#ff1a1a; cursor:pointer; font-weight:bold; font-size:16px;">✕</button>
+                <input type="text" class="pi-inst" placeholder="Ej: Voz Lead" value="${inst}" style="margin:0; padding:10px; font-size:10px;">
+                <input type="text" class="pi-ch" placeholder="CH 1" value="${ch}" style="margin:0; padding:10px; font-size:10px; color:var(--audio-accent); text-align:center;">
+                <input type="text" class="pi-aux" placeholder="Aux 5" value="${aux}" style="margin:0; padding:10px; font-size:10px; color:#00d2ff; text-align:center;">
+                <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#ff1a1a; cursor:pointer; font-weight:bold; font-size:14px;">✕</button>
             `;
             document.getElementById("mPatchContainer").appendChild(div);
         }
 
         function closeModal() { document.getElementById("patchModal").style.display = "none"; }
 
-        async function savePatch() {
+        async function saveUserAudioData() {
             const id = document.getElementById("mUserId").value;
-            const rows = Array.from(document.querySelectorAll(".patch-input-row"));
             
-            // Recopilamos todos los inputs y filtramos si la fila está vacía
-            const audioPatchArray = rows.map(row => ({
+            // 1. Recopilar Patch
+            const patchRows = Array.from(document.querySelectorAll(".patch-input-row"));
+            const audioPatchArray = patchRows.map(row => ({
                 inputName: row.querySelector(".pi-inst").value,
                 channel: row.querySelector(".pi-ch").value,
                 auxLine: row.querySelector(".pi-aux").value
             })).filter(c => c.inputName || c.channel || c.auxLine);
 
+            // 2. Recopilar Mezcla
+            const faderInputs = Array.from(document.querySelectorAll(".mix-fader"));
+            const personalMixArray = faderInputs.map(f => parseInt(f.value));
+
             try {
                 const res = await fetch(`/users/${id}`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-                    body: JSON.stringify({ audioChannels: audioPatchArray }) // Enviamos el arreglo completo
+                    body: JSON.stringify({ 
+                        audioChannels: audioPatchArray,
+                        personalMix: personalMixArray
+                    })
                 });
                 if (res.ok) { closeModal(); loadDirectory(); } 
-                else { alert("Error al guardar el Patch List."); }
+                else { alert("Error al guardar la información de audio."); }
             } catch (err) { alert("Hubo un problema de red."); }
         }
 
