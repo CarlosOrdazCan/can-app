@@ -10,10 +10,12 @@
         
         .stat-row {
             display: flex; align-items: center; gap: 20px; margin-bottom: 25px;
-            background: rgba(255,255,255,0.03); padding: 25px; border-radius: 20px; 
-            border: 1px solid var(--border); transition: 0.3s;
+            background: rgba(15, 15, 20, 0.4); backdrop-filter: blur(50px) saturate(150%);
+            padding: 25px; border-radius: 20px; 
+            border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
         }
-        .stat-row:hover { border-color: var(--primary); transform: translateX(10px); }
+        .stat-row:hover { border-color: rgba(255,255,255,0.15); transform: translateX(10px); box-shadow: 0 20px 40px rgba(0,0,0,0.7); }
 
         /* Contenedor de la barra */
         .bar-container { 

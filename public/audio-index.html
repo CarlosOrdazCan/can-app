@@ -6,21 +6,21 @@
     <link rel="stylesheet" href="styles.css">
     <style>
         :root { --audio-accent: #00ff88; --prod-accent: #b300ff; }
-        body { background: #050505; background-image: radial-gradient(circle at 50% 0%, rgba(0,255,136,0.05) 0%, transparent 60%); }
-        .mixer-section { background: rgba(255,255,255,0.02); border: 1px solid #222; border-radius: 20px; padding: 30px; margin-bottom: 30px; }
-        .mixer-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .mixer-section { background: rgba(15, 15, 20, 0.4); backdrop-filter: blur(50px) saturate(150%); border: 1px solid var(--border); border-radius: 28px; padding: 30px; margin-bottom: 30px; box-shadow: 0 15px 30px rgba(0,0,0,0.5); }
+        .mixer-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
         .patch-grid { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 10px; padding-bottom: 15px; -webkit-overflow-scrolling: touch; }
         .patch-grid::-webkit-scrollbar { height: 8px; }
-        .patch-grid::-webkit-scrollbar-track { background: #050505; }
-        .patch-grid::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .patch-grid::-webkit-scrollbar-track { background: transparent; }
+        .patch-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .patch-grid::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-        .channel-strip { flex: 0 0 120px; background: #0a0a0c; border: 1px solid #222; border-radius: 8px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; overflow: hidden; position: relative; }
-        .channel-strip:hover { border-color: var(--audio-accent); background: #111; transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,255,136,0.1); }
+        .channel-strip { flex: 0 0 120px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; overflow: hidden; position: relative; }
+        .channel-strip:hover { border-color: var(--audio-accent); background: rgba(0,255,136,0.05); transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,255,136,0.1); }
         
-        .strip-routing { background: #111; width: 100%; padding: 10px 5px; text-align: center; border-bottom: 1px solid #222; font-size: 9px; font-family: monospace; color: gray; min-height: 55px; display: flex; flex-direction: column; justify-content: center; }
+        .strip-routing { background: rgba(0,0,0,0.6); width: 100%; padding: 10px 5px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 9px; font-family: monospace; color: gray; min-height: 55px; display: flex; flex-direction: column; justify-content: center; }
         
-        .fader-section { height: 180px; width: 100%; position: relative; background: #050505; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid #222; }
-        .fader-track { width: 6px; height: 140px; background: #000; border: 1px solid #222; border-radius: 3px; position: relative; }
+        .fader-section { height: 180px; width: 100%; position: relative; background: transparent; display: flex; justify-content: center; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .fader-track { width: 6px; height: 140px; background: rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.05); border-radius: 3px; position: relative; }
         .fader-cap { width: 34px; height: 48px; background: linear-gradient(to bottom, #444, #111); border: 2px solid #555; border-radius: 4px; position: absolute; left: 50%; transform: translateX(-50%); top: 70%; box-shadow: 0 10px 15px rgba(0,0,0,0.9); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: top 0.2s; }
         .fader-cap::after { content: ''; width: 24px; height: 3px; background: var(--audio-accent); border-radius: 2px; box-shadow: 0 0 8px var(--audio-accent); }
         .channel-strip:hover .fader-cap { top: 60%; /* Efecto al hacer hover */ border-color: var(--audio-accent); }
@@ -31,15 +31,14 @@
         .p-photo { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid #222; margin: 10px 0 5px 0; }
         .p-inst { font-size: 9px; color: gray; margin-bottom: 10px; text-transform: uppercase; font-weight: bold; }
         
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; }
-        .m-content { background: #111; padding: 30px; border-radius: 20px; width: 85%; max-width: 1000px; max-height:90vh; overflow-y:auto; border: 1px solid var(--audio-accent); box-shadow: 0 10px 40px rgba(0,255,136,0.1); text-align: center; }
-        .m-content input { width: 100%; background: #050505; border: 1px solid #333; color: white; border-radius: 8px; outline: none; font-family: monospace; }
-        .m-content input:focus { border-color: var(--audio-accent); }
+        /* Modal handled by global CSS */
+        .modal-glass input { width: 100%; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 8px; outline: none; font-family: monospace; transition: 0.3s; box-sizing: border-box; }
+        .modal-glass input:focus { border-color: var(--audio-accent); background: rgba(0,0,0,0.8); }
         
         /* Personal Mix Faders */
-        .mix-container { display: flex; overflow-x: auto; gap: 10px; padding: 20px 10px; background: #050505; border-radius: 12px; border: 1px solid #222; margin-top: 15px; margin-bottom: 20px; -webkit-overflow-scrolling: touch; }
+        .mix-container { display: flex; overflow-x: auto; gap: 10px; padding: 20px 10px; background: rgba(0,0,0,0.4); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-top: 15px; margin-bottom: 20px; -webkit-overflow-scrolling: touch; }
         .mix-container::-webkit-scrollbar { height: 10px; }
-        .mix-container::-webkit-scrollbar-track { background: #111; }
+        .mix-container::-webkit-scrollbar-track { background: transparent; }
         .mix-container::-webkit-scrollbar-thumb { background: var(--audio-accent); border-radius: 5px; }
         .mix-strip { display: flex; flex-direction: column; align-items: center; min-width: 45px; }
         .mix-ch { font-size: 10px; color: gray; font-weight: bold; margin-bottom: 10px; }
@@ -106,8 +105,8 @@
     </div>
 
     <!-- MODAL DE EDICIÓN MULTIPLE Y MEZCLA -->
-    <div id="patchModal" class="modal">
-        <div class="m-content">
+    <div id="patchModal" class="modal-overlay">
+        <div class="modal-glass" style="max-width: 1000px; width: 85%; border-color: var(--audio-accent);">
             <div style="display: flex; gap: 20px; text-align: left; align-items: center; margin-bottom: 20px;">
                 <img id="mPhoto" src="" style="width:80px; height:80px; border-radius:50%; border:2px solid var(--audio-accent); object-fit:cover;">
                 <div>
@@ -118,14 +117,14 @@
             
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; text-align: left;">
                 <!-- PANEL DE RUTEO (PATCH) -->
-                <div style="background: #0a0a0c; border: 1px solid #222; border-radius: 12px; padding: 15px;">
-                    <label style="font-size:10px; color:white; font-weight:bold; display:block; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">ASIGNACIÓN (RUTEO)</label>
+                <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px;">
+                    <label style="font-size:10px; color:white; font-weight:bold; display:block; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px;">ASIGNACIÓN (RUTEO)</label>
                     <div id="mPatchContainer"></div>
-                    <button onclick="addPatchRow()" style="background:transparent; border:1px dashed #444; color:gray; width:100%; padding:10px; border-radius:8px; cursor:pointer; margin-top:10px; font-weight:bold; font-size:10px;">+ AGREGAR LÍNEA</button>
+                    <button onclick="addPatchRow()" style="background:transparent; border:1px dashed rgba(255,255,255,0.2); color:gray; width:100%; padding:10px; border-radius:8px; cursor:pointer; margin-top:10px; font-weight:bold; font-size:10px; transition:0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">+ AGREGAR LÍNEA</button>
                 </div>
 
                 <!-- PANEL DE IN-EARS (MEZCLA) -->
-                <div style="background: #0a0a0c; border: 1px solid #222; border-radius: 12px; padding: 15px; overflow: hidden;">
+                <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 15px; overflow: hidden;">
                     <label style="font-size:10px; color:var(--audio-accent); font-weight:bold; display:block; margin-bottom:5px;">MEZCLADORA IN-EAR PERSONAL (48 CANALES)</label>
                     <div style="font-size:9px; color:gray; margin-bottom:10px;">Mueve los faders para ajustar la mezcla del monitor de este músico.</div>
                     

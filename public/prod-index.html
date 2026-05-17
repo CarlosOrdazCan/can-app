@@ -6,14 +6,13 @@
     <link rel="stylesheet" href="styles.css">
     <style>
         :root { --prod-accent: #b300ff; }
-        body { background: #050505; background-image: radial-gradient(circle at 50% 0%, rgba(179,0,255,0.05) 0%, transparent 60%); }
-        .prod-card { background: rgba(15,15,20,0.8); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 30px; margin-bottom: 25px; transition: 0.3s; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
-        .prod-card:hover { border-color: var(--prod-accent); box-shadow: 0 10px 30px rgba(179,0,255,0.1); }
+        .prod-card { background: rgba(15, 15, 20, 0.4); backdrop-filter: blur(50px) saturate(150%); border: 1px solid var(--border); border-radius: 28px; padding: 30px; margin-bottom: 25px; transition: 0.3s; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; box-shadow: 0 15px 30px rgba(0,0,0,0.5); }
+        .prod-card:hover { border-color: rgba(255,255,255,0.15); box-shadow: 0 20px 40px rgba(0,0,0,0.7); transform: translateY(-5px); }
         .min-badge { font-size: 10px; font-weight: bold; padding: 4px 10px; border-radius: 6px; letter-spacing: 2px; text-transform: uppercase; }
-        .btn-prod { background: transparent; border: 1px solid var(--prod-accent); color: var(--prod-accent); padding: 12px 20px; border-radius: 12px; font-weight: 900; font-size: 11px; cursor: pointer; transition: 0.3s; letter-spacing: 1px; }
-        .btn-prod:hover { background: var(--prod-accent); color: white; }
-        .btn-live { background: var(--prod-accent); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 900; font-size: 11px; cursor: pointer; transition: 0.3s; letter-spacing: 1px; }
-        .btn-live:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(179,0,255,0.3); }
+        .btn-prod { background: rgba(179,0,255,0.1); border: 1px solid var(--prod-accent); color: var(--prod-accent); padding: 12px 20px; border-radius: 12px; font-weight: 900; font-size: 11px; cursor: pointer; transition: 0.3s; letter-spacing: 1px; }
+        .btn-prod:hover { background: var(--prod-accent); color: white; box-shadow: 0 5px 15px rgba(179,0,255,0.3); }
+        .btn-live { background: var(--prod-accent); color: white; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 900; font-size: 11px; cursor: pointer; transition: 0.3s; letter-spacing: 1px; box-shadow: 0 5px 15px rgba(179,0,255,0.3); }
+        .btn-live:hover { transform: translateY(-3px); filter: brightness(1.2); }
     </style>
 </head>
 <body>

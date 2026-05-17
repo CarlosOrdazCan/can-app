@@ -10,11 +10,12 @@
 <title>Modo Letras</title>
 
 <style>
+:root { --primary: #00d2ff; }
 body{
   margin:0;
-  background:black;
+  background:#050505;
   color:white;
-  font-family: Arial;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   text-align:center;
 }
 
@@ -25,8 +26,11 @@ body{
 
 /* TITULO */
 h1{
-  font-size:40px;
+  font-size:45px;
   margin-bottom:40px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--primary);
 }
 
 /* LETRA */
@@ -39,36 +43,52 @@ h1{
 /* CONTROLES */
 .controls{
   position:fixed;
-  bottom:20px;
+  bottom:30px;
   width:100%;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
 }
 
 .controls button{
-  padding:15px;
+  padding:15px 30px;
   margin:5px;
-  border:none;
-  border-radius:10px;
-  background:#ff4d4d;
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:15px;
+  background:rgba(15, 15, 20, 0.4);
+  backdrop-filter: blur(20px);
   color:white;
+  font-size: 20px;
+  cursor: pointer;
+  transition: 0.3s;
 }
+
+.controls button:hover { background: rgba(255,255,255,0.1); transform: translateY(-3px); }
 
 /* SCROLL */
 .scroll-controls{
   position:fixed;
-  right:10px;
-  top:40%;
+  right:30px;
+  top:50%;
+  transform: translateY(-50%);
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:15px;
 }
 
 .scroll-controls button{
-  padding:10px;
-  border:none;
-  border-radius:10px;
-  background:#ff4d4d;
+  padding:15px;
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:15px;
+  background:rgba(15, 15, 20, 0.4);
+  backdrop-filter: blur(20px);
   color:white;
+  font-size: 20px;
+  cursor: pointer;
+  transition: 0.3s;
 }
+
+.scroll-controls button:hover { background: rgba(255,255,255,0.1); transform: scale(1.1); }
 
 /* OCULTAR UI */
 .hidden{

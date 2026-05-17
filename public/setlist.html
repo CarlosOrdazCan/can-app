@@ -6,58 +6,49 @@
     <link rel="stylesheet" href="styles.css">
     <style>
         :root { --set-accent: #ff0055; --chart-accent: #00d2ff; }
-        body { background: #050505; }
         .layout { display: grid; grid-template-columns: 300px 1fr; gap: 30px; margin-top: 30px; height: calc(100vh - 120px); }
         
         /* PANEL IZQUIERDO: LISTA DE SETLISTS */
-        .list-panel { background: #0a0a0c; border: 1px solid #222; border-radius: 20px; padding: 20px; display: flex; flex-direction: column; }
-        .set-card { background: #111; border: 1px solid #333; padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
-        .set-card:hover { border-color: var(--set-accent); transform: translateX(5px); }
+        .list-panel { background: rgba(15, 15, 20, 0.4); backdrop-filter: blur(50px) saturate(150%); border: 1px solid var(--border); border-radius: 28px; padding: 20px; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .set-card { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 16px; margin-bottom: 10px; cursor: pointer; transition: 0.3s; }
+        .set-card:hover { border-color: var(--set-accent); transform: translateX(5px); background: rgba(255,255,255,0.05); }
         .set-card.active { background: rgba(255, 0, 85, 0.1); border-color: var(--set-accent); border-left: 4px solid var(--set-accent); }
         .set-title { font-weight: 900; color: white; font-size: 14px; text-transform: uppercase; }
         .set-date { font-size: 11px; color: gray; margin-top: 5px; }
 
         /* PANEL DERECHO: CONSTRUCTOR */
-        .editor-panel { background: #0a0a0c; border: 1px solid #222; border-radius: 20px; padding: 30px; overflow-y: auto; display: none; }
+        .editor-panel { background: rgba(15, 15, 20, 0.4); backdrop-filter: blur(50px) saturate(150%); border: 1px solid var(--border); border-radius: 28px; padding: 30px; overflow-y: auto; display: none; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 25px; }
-        .input-box { background: #111; border: 1px solid #333; color: white; padding: 12px; border-radius: 10px; width: 100%; outline: none; box-sizing: border-box; }
-        .input-box:focus { border-color: var(--set-accent); }
         
-        .section-title { color: var(--set-accent); font-size: 12px; font-weight: bold; letter-spacing: 2px; border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 30px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .section-title { color: var(--set-accent); font-size: 12px; font-weight: bold; letter-spacing: 2px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-top: 30px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
         
         /* CREADOR DE BANDA Y CANCIONES */
-        .item-row { display: flex; gap: 10px; align-items: center; background: #111; padding: 10px 15px; border-radius: 10px; margin-bottom: 8px; border: 1px solid #222; }
+        .item-row { display: flex; gap: 10px; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 16px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.05); }
         .item-name { flex-grow: 1; color: white; font-weight: bold; font-size: 13px; }
-        .item-input { background: #050505; border: 1px solid #333; color: var(--chart-accent); padding: 6px 10px; border-radius: 6px; width: 100px; font-size: 12px; text-align: center; font-weight: bold; outline: none; }
-        .btn-icon { background: #222; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
-        .btn-icon:hover { background: #333; }
+        .item-input { background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); color: var(--chart-accent); padding: 8px 10px; border-radius: 8px; width: 100px; font-size: 12px; text-align: center; font-weight: bold; outline: none; transition: 0.3s; }
+        .item-input:focus { border-color: var(--chart-accent); background: #000; box-shadow: 0 0 10px rgba(0,210,255,0.2); }
+        .btn-icon { background: rgba(255,255,255,0.1); color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.3s; }
+        .btn-icon:hover { background: rgba(255,255,255,0.2); }
         .btn-preview { background: rgba(0, 210, 255, 0.1); color: var(--chart-accent); border: 1px solid var(--chart-accent); }
-        .btn-preview:hover { background: var(--chart-accent); color: black; }
-        .btn-del { color: #ff1a1a; background: transparent; }
+        .btn-preview:hover { background: var(--chart-accent); color: black; box-shadow: 0 5px 15px rgba(0,210,255,0.3); }
+        .btn-del { color: #ff1a1a; background: transparent; border: 1px solid transparent; }
+        .btn-del:hover { border-color: #ff1a1a; background: rgba(255,26,26,0.1); }
 
         .search-area { position: relative; margin-bottom: 15px; }
-        .search-results { position: absolute; top: 100%; left: 0; width: 100%; background: #111; border: 1px solid var(--set-accent); border-radius: 8px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-        .res-item { padding: 12px 15px; border-bottom: 1px solid #222; cursor: pointer; color: white; font-size: 13px; font-weight: bold; display: flex; justify-content: space-between; }
-        .res-item:hover { background: var(--set-accent); }
+        .search-results { position: absolute; top: 100%; left: 0; width: 100%; background: rgba(15,15,20,0.95); backdrop-filter: blur(20px); border: 1px solid var(--set-accent); border-radius: 12px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
+        .res-item { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; color: white; font-size: 13px; font-weight: bold; display: flex; justify-content: space-between; transition: 0.2s; }
+        .res-item:hover { background: var(--set-accent); padding-left: 20px; }
 
-        /* MODAL PREVIEW DEL CHART (HYBRID ENGINE) */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; align-items: center; justify-content: center; }
-        .m-content { background: #050505; padding: 40px; border-radius: 20px; width: 700px; max-height: 90vh; overflow-y: auto; border: 1px solid var(--chart-accent); position: relative; }
-        .close-modal { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: white; font-size: 24px; cursor: pointer; }
-        
+        /* PREVIEW MODAL IS HANDLED BY STYLES.CSS (.modal-overlay / .modal-glass) */
         .c-title { font-size: 28px; font-weight: 900; color: white; margin: 0 0 5px 0; text-transform: uppercase; }
         .c-meta { font-size: 12px; color: gray; margin-bottom: 30px; font-family: monospace; }
         
         .song-section { margin-bottom: 35px; }
-        .sec-name { background: #111; color: white; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 15px; border-left: 3px solid var(--chart-accent); }
-        .chart-lyric { white-space: pre-wrap; font-size: 16px; line-height: 2.8; color: #ddd; font-family: sans-serif; }
+        .sec-name { background: rgba(255,255,255,0.1); color: white; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 15px; border-left: 3px solid var(--chart-accent); }
+        .chart-lyric { white-space: pre-wrap; font-size: 16px; line-height: 2.8; color: rgba(255,255,255,0.9); font-family: 'Inter', sans-serif; }
         .c-chord { position: relative; display: inline-block; }
         .c-chord span { position: absolute; bottom: 90%; left: 0; color: var(--chart-accent); font-weight: 900; font-family: monospace; font-size: 14px; text-shadow: 0 0 8px rgba(0,210,255,0.2); transform: translateY(5px); }
-        .old-chords { color: var(--chart-accent); font-family: monospace; font-weight: bold; margin-bottom: 5px; font-size: 14px; background: rgba(0, 210, 255, 0.05); padding: 8px 15px; border-radius: 8px; display: inline-block; }
-
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .old-chords { color: var(--chart-accent); font-family: monospace; font-weight: bold; margin-bottom: 5px; font-size: 14px; background: rgba(0, 210, 255, 0.05); padding: 8px 15px; border-radius: 8px; display: inline-block; border: 1px solid rgba(0,210,255,0.2); }
     </style>
 </head>
 <body>
@@ -122,9 +113,9 @@
         </div>
     </div>
 
-    <div id="chartModal" class="modal">
-        <div class="m-content">
-            <button class="close-modal" onclick="closePreview()">✕</button>
+    <div id="chartModal" class="modal-overlay">
+        <div class="modal-glass" style="max-width:800px;">
+            <button class="close-modal" onclick="closePreview()" style="position:absolute; top:20px; right:20px; background:transparent; border:none; color:white; font-size:24px; cursor:pointer;">✕</button>
             <div id="previewHeader"></div>
             <div id="previewRenderArea" style="margin-top:20px;"></div>
         </div>
@@ -346,10 +337,16 @@
             } else { sectionsHTML = "<p style='color:gray;'>No hay letra cargada.</p>"; }
 
             document.getElementById("previewRenderArea").innerHTML = sectionsHTML;
-            document.getElementById("chartModal").style.display = "flex";
+            const modal = document.getElementById("chartModal");
+            modal.style.display = "flex";
+            setTimeout(() => modal.classList.add("active"), 10);
         }
 
-        function closePreview() { document.getElementById("chartModal").style.display = "none"; }
+        function closePreview() { 
+            const modal = document.getElementById("chartModal");
+            modal.classList.remove("active");
+            setTimeout(() => modal.style.display = "none", 400);
+        }
 
         // --- GUARDAR Y ELIMINAR ---
         async function saveSetlist() {

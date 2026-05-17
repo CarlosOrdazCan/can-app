@@ -8,41 +8,41 @@
         :root { --prod-accent: #b300ff; }
         body { background: #000; color: #ddd; overflow-x: hidden; }
         
-        .live-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: #0a0a0c; border-bottom: 2px solid var(--prod-accent); position: sticky; top: 0; z-index: 100; box-shadow: 0 5px 20px rgba(179,0,255,0.15); }
-        .clock { font-size: 28px; font-weight: 900; color: white; font-variant-numeric: tabular-nums; letter-spacing: 2px; }
-        .live-badge { background: #ff1a1a; color: white; padding: 5px 12px; border-radius: 6px; font-weight: 900; letter-spacing: 3px; font-size: 12px; animation: pulse 2s infinite; }
+        .live-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: rgba(10, 10, 15, 0.4); backdrop-filter: blur(50px) saturate(150%); border-bottom: 2px solid var(--prod-accent); position: sticky; top: 0; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .clock { font-size: 28px; font-weight: 900; color: white; font-variant-numeric: tabular-nums; letter-spacing: 2px; text-shadow: 0 0 15px rgba(179,0,255,0.4); }
+        .live-badge { background: #ff1a1a; color: white; padding: 5px 12px; border-radius: 6px; font-weight: 900; letter-spacing: 3px; font-size: 12px; animation: pulse 2s infinite; box-shadow: 0 0 15px rgba(255,26,26,0.5); }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .crew-status-bar { background: #111; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #222; }
+        .crew-status-bar { background: rgba(15, 15, 20, 0.3); backdrop-filter: blur(50px); padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .crew-list { display: flex; gap: 20px; flex-wrap: wrap; }
-        .crew-dot { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: bold; color: gray; background: #0a0a0c; padding: 5px 12px; border-radius: 20px; border: 1px solid #333; }
-        .dot-red { color: #ff1a1a; text-shadow: 0 0 5px #ff1a1a; }
-        .dot-green { color: #00ff88; text-shadow: 0 0 5px #00ff88; }
+        .crew-dot { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: bold; color: gray; background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .dot-red { color: #ff1a1a; text-shadow: 0 0 8px rgba(255,26,26,0.8); }
+        .dot-green { color: #00ff88; text-shadow: 0 0 8px rgba(0,255,136,0.8); }
         
         .btn-ready { background: #00ff88; color: black; border: none; padding: 8px 15px; border-radius: 8px; font-weight: 900; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px rgba(0,255,136,0.2); font-size: 11px; margin-left: 5px; }
         .btn-ready:hover { transform: scale(1.05); }
         .btn-reset { background: transparent; border: 1px solid #ff1a1a; color: #ff1a1a; padding: 8px 15px; border-radius: 8px; font-size: 10px; font-weight: bold; cursor: pointer; }
 
         .live-grid { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; padding: 20px 30px; height: calc(100vh - 130px); }
-        .panel { background: #0a0a0c; border: 1px solid #222; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; }
-        .panel-header { background: #111; padding: 15px; font-weight: 900; font-size: 12px; letter-spacing: 2px; color: var(--prod-accent); border-bottom: 1px solid #333; text-align: center; }
+        .panel { background: rgba(15, 15, 20, 0.4); backdrop-filter: blur(50px) saturate(150%); border: 1px solid var(--border); border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 15px 30px rgba(0,0,0,0.5); }
+        .panel-header { background: rgba(0,0,0,0.4); padding: 15px; font-weight: 900; font-size: 12px; letter-spacing: 2px; color: var(--prod-accent); border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; }
         .panel-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
 
-        .patch-item { background: rgba(255,255,255,0.03); border-left: 3px solid var(--prod-accent); padding: 12px; margin-bottom: 10px; border-radius: 0 8px 8px 0; }
-        .patch-name { font-weight: bold; color: white; font-size: 14px; margin-bottom: 5px; }
+        .patch-item { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); border-left: 3px solid var(--prod-accent); padding: 12px; margin-bottom: 10px; border-radius: 0 12px 12px 0; }
+        .patch-name { font-weight: bold; color: white; font-size: 14px; margin-bottom: 5px; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
-        .ros-block { display: grid; grid-template-columns: 80px 1fr; gap: 15px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed #333; }
-        .ros-time { font-size: 18px; font-weight: 900; color: white; }
+        .ros-block { display: grid; grid-template-columns: 80px 1fr; gap: 15px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+        .ros-time { font-size: 18px; font-weight: 900; color: white; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         .ros-title { font-size: 16px; font-weight: bold; color: var(--prod-accent); margin-bottom: 8px; }
         .ros-notes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .note-box { background: #111; padding: 10px; border-radius: 8px; font-size: 12px; border: 1px solid #222; }
+        .note-box { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 12px; font-size: 12px; border: 1px solid rgba(255,255,255,0.05); }
         .note-title { font-size: 9px; font-weight: bold; color: gray; margin-bottom: 4px; display: block; }
 
         .song-item { margin-bottom: 30px; }
-        .song-title { font-size: 14px; font-weight: 900; color: white; background: #222; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .song-title { font-size: 14px; font-weight: 900; color: white; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .lyric-section { margin-bottom: 10px; }
-        .lyric-name { font-size: 10px; color: var(--prod-accent); font-weight: bold; margin-bottom: 2px; }
-        .lyric-text { font-size: 13px; color: #bbb; line-height: 1.5; white-space: pre-line; }
+        .lyric-name { font-size: 10px; color: var(--prod-accent); font-weight: bold; margin-bottom: 5px; }
+        .lyric-text { font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.6; white-space: pre-line; }
         
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #050505; }
