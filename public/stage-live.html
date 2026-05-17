@@ -263,16 +263,17 @@
             // --- EL MOTOR INTELIGENTE (3 VISTAS + DUAL REGEX) ---
             if (currentLiveSections && currentLiveSections.length > 0) {
                 renderArea.innerHTML = currentLiveSections.map(sec => {
+                    const safeLyrics = sec.lyrics || '';
                     // Detecta corchetes [G] o paréntesis (G)
-                    let hasChordPro = /[\[\(].*?[\]\)]/.test(sec.lyrics);
+                    let hasChordPro = /[\[\(].*?[\]\)]/.test(safeLyrics);
                     
                     // Limpia la letra de acordes y símbolos
-                    let cleanLyrics = sec.lyrics.replace(/[\[\(].*?[\]\)]/g, ''); 
+                    let cleanLyrics = safeLyrics.replace(/[\[\(].*?[\]\)]/g, ''); 
                     let contentHTML = "";
 
                     // VISTA 1: CANTANTES (Letra limpia)
                     if (currentViewMode === 'cantante') {
-                        contentHTML = `<div class="chart-lyric">${cleanLyrics}</div>`;
+                        contentHTML = `<div class="chart-lyric">${cleanLyrics || '<span style="color:#555;">[Instrumental]</span>'}</div>`;
                     } 
                     // VISTA 2: ACORDES Y LETRA (Clásica, bloques arriba)
                     else if (currentViewMode === 'acordes') {
@@ -280,13 +281,13 @@
                         if (sec.chords && sec.chords.length > 0 && sec.chords[0] !== "") {
                             chordsStr = sec.chords.join(' - ');
                         } else if (hasChordPro) {
-                            let matches = sec.lyrics.match(/[\[\(](.*?)[\]\)]/g);
+                            let matches = safeLyrics.match(/[\[\(](.*?)[\]\)]/g);
                             if(matches) {
                                 chordsStr = matches.map(m => m.replace(/[\[\(\)\]]/g, '')).join(' - ');
                             }
                         }
                         let chordsHTML = chordsStr ? `<div class="old-chords">${chordsStr}</div>` : '';
-                        contentHTML = `${chordsHTML}<div class="chart-lyric">${cleanLyrics}</div>`;
+                        contentHTML = `${chordsHTML}<div class="chart-lyric">${cleanLyrics || '<span style="color:#555;">[Instrumental]</span>'}</div>`;
                     } 
                     // VISTA 3: SOLO ACORDES (Oculta la letra)
                     else if (currentViewMode === 'solo-acordes') {
@@ -294,7 +295,7 @@
                         if (sec.chords && sec.chords.length > 0 && sec.chords[0] !== "") {
                             chordsStr = sec.chords.join(' - ');
                         } else if (hasChordPro) {
-                            let matches = sec.lyrics.match(/[\[\(](.*?)[\]\)]/g);
+                            let matches = safeLyrics.match(/[\[\(](.*?)[\]\)]/g);
                             if(matches) {
                                 chordsStr = matches.map(m => m.replace(/[\[\(\)\]]/g, '')).join(' - ');
                             }
@@ -306,11 +307,11 @@
                     // VISTA 4: CHART (Flotante)
                     else if (currentViewMode === 'chart') {
                         if (hasChordPro) {
-                            let parsedLyrics = sec.lyrics.replace(/[\[\(](.*?)[\]\)]/g, '<span class="c-chord"><span>$1</span></span>');
+                            let parsedLyrics = safeLyrics.replace(/[\[\(](.*?)[\]\)]/g, '<span class="c-chord"><span>$1</span></span>');
                             contentHTML = `<div class="chart-lyric">${parsedLyrics}</div>`;
                         } else {
                             let chordsHTML = sec.chords && sec.chords.length > 0 && sec.chords[0] !== "" ? `<div class="old-chords">${sec.chords.join(' - ')}</div>` : '';
-                            contentHTML = `${chordsHTML}<div class="chart-lyric">${sec.lyrics}</div>`;
+                            contentHTML = `${chordsHTML}<div class="chart-lyric">${safeLyrics || '<span style="color:#555;">[Instrumental]</span>'}</div>`;
                         }
                     }
 
