@@ -546,9 +546,25 @@ app.post("/notifications/read-all", async (req, res) => {
     }
 });
 
-// Static files
-app.use("/alabanza", express.static(path.join(__dirname, "alabanza")));
-app.use(express.static(path.join(__dirname, "dist")));
+// Static files with no-cache headers for HTML files
+app.use("/alabanza", express.static(path.join(__dirname, "alabanza"), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
+app.use(express.static(path.join(__dirname, "dist"), {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+    }
+}));
 app.use(express.static(path.join(__dirname)));
 
 // SPA Fallback for unknown routes
