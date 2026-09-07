@@ -40,6 +40,14 @@ export const MENU_BY_ROLE = {
         { id: 'colegiaturas', label: 'Control Colegiaturas', icon: 'fas fa-file-invoice-dollar' },
         { id: 'playback', label: 'Sala de Ensayo (Stems)', icon: 'fas fa-sliders-h' }
     ],
+    produccion: [
+        { id: 'panel', label: 'Panel Cabina & ProPresenter', icon: 'fas fa-desktop' },
+        { id: 'repertorio', label: 'Repertorio de Canciones', icon: 'fas fa-music' },
+        { id: 'estatus', label: 'Estatus Clases', icon: 'fas fa-calendar-check' },
+        { id: 'anuncios', label: 'Anuncios Staff', icon: 'fas fa-bullhorn' },
+        { id: 'colegiaturas', label: 'Control Colegiaturas', icon: 'fas fa-file-invoice-dollar' },
+        { id: 'playback', label: 'Sala de Ensayo (Stems)', icon: 'fas fa-sliders-h' }
+    ],
     adoracion: [
         { id: 'control', label: 'Plan Ensamble', icon: 'fas fa-calendar-alt' },
         { id: 'repertorio', label: 'Repertorio Musical', icon: 'fas fa-music' }
