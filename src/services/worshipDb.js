@@ -23,10 +23,119 @@ export const defaultDB = {
         "mgonzalez": { password: "can2026**", rol: "pastor", nombre: "Martha Gonzalez", area: "Pastoral" }
     },
     canciones: [
-        { id: "1", titulo: "Tumbas a Jardines", tono: "B", autor: "Elevation Worship", linkAcordes: "https://www.lacuerda.net", linkVideo: "https://www.youtube.com", activo: true },
-        { id: "2", titulo: "Digno de Alabar", tono: "G", autor: "Phil Wickham", linkAcordes: "https://www.lacuerda.net", linkVideo: "https://www.youtube.com", activo: true },
-        { id: "3", titulo: "Hermoso Nombre", tono: "D", autor: "Hillsong Worship", linkAcordes: "https://www.lacuerda.net", linkVideo: "https://www.youtube.com", activo: true },
-        { id: "4", titulo: "A una voz", tono: "E", autor: "Living", linkAcordes: "https://www.lacuerda.net", linkVideo: "https://www.youtube.com", activo: false }
+        { 
+            id: "1", 
+            titulo: "Tumbas a Jardines", 
+            tono: "B", 
+            bpm: "70 BPM",
+            autor: "Elevation Worship", 
+            linkAcordes: "https://www.lacuerda.net", 
+            linkVideo: "https://www.youtube.com", 
+            activo: true,
+            letra: `[VERSO 1]
+El mundo busqué, no pudo llenar
+El vacío en mi corazón
+Palabras vacías, tesoros sin fin
+Tú lo cambiaste todo.
+
+[CORO]
+Oh, no hay nadie como Tú
+No hay nadie como Tú
+Tú cambias mi lamento en baile
+Tú das belleza por cenizas
+Tú cambias mi dolor en gozo
+Tú eres el único que puede salvar.
+
+[VERSO 2]
+Saliste a mi encuentro, me diste perdón
+Me vestiste de Tu amor
+Tú fuiste la gracia que me rescató
+Tu sangre me dio salvación.
+
+[PUENTE]
+De las tumbas a jardines
+Tú haces cosas nuevas
+De las tumbas a jardines
+Tú eres el Señor.`
+        },
+        { 
+            id: "2", 
+            titulo: "Digno de Alabar", 
+            tono: "G", 
+            bpm: "74 BPM",
+            autor: "Phil Wickham", 
+            linkAcordes: "https://www.lacuerda.net", 
+            linkVideo: "https://www.youtube.com", 
+            activo: true,
+            letra: `[VERSO 1]
+Grandes cosas has hecho Tú
+Tú ganaste la cruz por mí
+Con poder venciste a la muerte y dolor
+Te entregaste por amor.
+
+[CORO]
+Eres digno de alabar
+Tu nombre exaltado es
+Jesús, mi Rey y Salvador
+Tuyo es el reino y el poder.
+
+[VERSO 2]
+En el valle Tu luz brillará
+En la tormenta Tu paz me sostendrá
+Ningún temor me podrá mover
+En Tu gracia confiaré.`
+        },
+        { 
+            id: "3", 
+            titulo: "Hermoso Nombre", 
+            tono: "D", 
+            bpm: "68 BPM",
+            autor: "Hillsong Worship", 
+            linkAcordes: "https://www.lacuerda.net", 
+            linkVideo: "https://www.youtube.com", 
+            activo: true,
+            letra: `[VERSO 1]
+Tú eras el verbo en el principio
+El Unigénito de Dios
+El misterio de Tu gloria
+Revelado en Tu amor.
+
+[CORO]
+Cuán hermoso es Tu nombre
+Cuán hermoso es Tu nombre
+El nombre de Jesús mi Rey
+Cuán hermoso es Tu nombre
+Nada se iguala a Él
+Cuán hermoso es Tu nombre
+El nombre de Jesús.
+
+[VERSO 2]
+No me querías en el cielo
+Jesús trajiste el cielo a mí
+Tu amor fue más fuerte que el pecado
+Nada nos separará.`
+        },
+        { 
+            id: "4", 
+            titulo: "A una voz", 
+            tono: "E", 
+            bpm: "128 BPM",
+            autor: "Living", 
+            linkAcordes: "https://www.lacuerda.net", 
+            linkVideo: "https://www.youtube.com", 
+            activo: false,
+            letra: `[VERSO 1]
+Juntos estamos ante Tu presencia
+Declarando Tu majestad
+Un solo pueblo, un solo cuerpo
+Cantando a una sola voz.
+
+[CORO]
+A una voz te adoramos
+A una voz te cantamos
+Digno es el Cordero
+Que resucitó y reinó.`
+        }
     ],
     calificaciones: {
         "alumno1": { teoria: 85, tecnica: 90, notas: "Muy buen desempeño en acordes mayores y escalas básicas en octavas." },
@@ -152,6 +261,23 @@ export function initDB() {
         if (db.ensambleActivo === undefined) { db.ensambleActivo = false; mod = true; }
         if (!db.ensambleAsignaciones) { db.ensambleAsignaciones = defaultDB.ensambleAsignaciones; mod = true; }
         if (!db.notasPastorales) { db.notasPastorales = []; mod = true; }
+        if (!db.canciones || db.canciones.length === 0) { 
+            db.canciones = defaultDB.canciones; 
+            mod = true; 
+        } else {
+            db.canciones = db.canciones.map(c => {
+                const def = defaultDB.canciones.find(d => d.id === c.id || d.titulo.toLowerCase() === c.titulo?.toLowerCase());
+                if (def && (!c.letra || !c.bpm)) {
+                    mod = true;
+                    return {
+                        ...c,
+                        bpm: c.bpm || def.bpm,
+                        letra: c.letra || def.letra
+                    };
+                }
+                return c;
+            });
+        }
         
         Object.keys(db.usuarios).forEach(k => {
             const u = db.usuarios[k];
