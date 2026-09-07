@@ -5,13 +5,29 @@ let currentTransposeSteps = 0;
 let currentUserRole = "Viewer";
 let isFullAdmin = false;
 let canEditSongs = false;
+let isProdUser = false;
+
 try {
     const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
     currentUserRole = storedUser.role || "Viewer";
-    const min = storedUser.ministry || "";
+    const min = localStorage.getItem("activeMinistry") || storedUser.ministry || "";
+    const instStr = String(storedUser.instrument || '').toLowerCase();
+    const branchStr = String(storedUser.techBranch || '').toLowerCase();
+    
     isFullAdmin = (currentUserRole === "Full Administrador" || (storedUser.username && storedUser.username.toLowerCase() === "cordaz"));
-    canEditSongs = isFullAdmin || (currentUserRole === "Editor" && min !== "Produccion" && !String(storedUser.instrument || '').toLowerCase().includes("audio"));
+    canEditSongs = isFullAdmin || (currentUserRole === "Editor" && min !== "Produccion" && !instStr.includes("audio"));
+    
+    // Detectar si el usuario activo es de Producción / Video / Cabina
+    isProdUser = (min === "Produccion" || instStr.includes("produccion") || instStr.includes("video") || instStr.includes("propresenter") || branchStr.length > 0) && !instStr.includes("audio");
 } catch(e) {}
+
+// Si es usuario de producción, por defecto mostramos SOLO LETRAS (SIN ACORDES)
+let showChordsMode = !isProdUser;
+
+function setChordsMode(show) {
+    showChordsMode = show;
+    renderChart();
+}
 
 // Carga Inicial del Catálogo
 async function loadSongs() {
@@ -82,7 +98,7 @@ function filterSongs() {
 // Visor Principal de Chart (ChartBuilder Style)
 async function viewChart(id) {
     const panel = document.getElementById("viewerPanel");
-    panel.innerHTML = `<div class="empty-state">Cargando cifrado...</div>`;
+    panel.innerHTML = `<div class="empty-state">Cargando canción...</div>`;
     currentTransposeSteps = 0;
     
     try {
@@ -99,7 +115,7 @@ async function viewChart(id) {
     }
 }
 
-function renderSectionBody(sec, steps) {
+function renderSectionBody(sec, steps, showChords) {
     const chordSheetRaw = sec.chordSheet || sec.lyrics || "";
     const lines = chordSheetRaw.split('\n');
 
@@ -107,7 +123,7 @@ function renderSectionBody(sec, steps) {
     const chordInlineRegex = /\b([A-G][#b]?(?:m|maj|min|dim|aug|sus[24]?|add[0-9]|M?[0-9]*(?:-[0-9]+)?)*(?:\/[A-G][#b]?)?)\b/g;
 
     function isLineChords(line) {
-        const tokens = line.trim().split(/\s+/).filter(t => t.length > 0);
+        const tokens = line.trim().replace(/[\/\-\|\(\)]/g, ' ').split(/\s+/).filter(t => t.length > 0);
         if (tokens.length === 0) return false;
         let chordCount = 0;
         tokens.forEach(t => {
@@ -116,14 +132,29 @@ function renderSectionBody(sec, steps) {
         return (chordCount / tokens.length) >= 0.55;
     }
 
-    // Comprobar si tiene formato con acordes intercalados
+    if (!showChords) {
+        // MODO PRODUCCIÓN: PURA LETRA SIN ACORDES
+        const lyricsLines = lines.filter(l => !isLineChords(l) && l.trim() !== "");
+        if (lyricsLines.length > 0) {
+            const rendered = lyricsLines.map(line => 
+                `<div class="cb-lyrics-line" style="font-size:18px; line-height:1.6; color:#ffffff; font-weight:700; margin-bottom:8px; font-family:var(--font-title);">${line}</div>`
+            ).join('');
+            return `<div style="padding:4px 0;">${rendered}</div>`;
+        } else if (sec.lyrics && sec.lyrics.trim() !== "" && !isLineChords(sec.lyrics)) {
+            return `<div class="cb-lyrics-line" style="font-size:18px; line-height:1.6; color:#ffffff; font-weight:700; font-family:var(--font-title);">${sec.lyrics.replace(/\n/g, '<br>')}</div>`;
+        } else {
+            return `<div style="color:var(--text-muted); font-style:italic; font-size:13px; padding:6px 0;">[Sección Instrumental]</div>`;
+        }
+    }
+
+    // MODO BANDA: CIFRADO CON ACORDES
     const hasChordLines = lines.some(l => isLineChords(l));
 
     if (hasChordLines) {
         let rendered = lines.map(line => {
             if (isLineChords(line)) {
                 const transposed = line.replace(chordInlineRegex, match => transposeChord(match, steps));
-                return `<div class="cb-chords-line" style="font-size:16px; margin:0; line-height:1.4; color:var(--accent-blue);">${transposed}</div>`;
+                return `<div class="cb-chords-line" style="font-size:16px; margin:0; line-height:1.4; color:var(--accent-blue); font-weight:800;">${transposed}</div>`;
             } else {
                 return `<div class="cb-lyrics-line" style="font-family:var(--font-chords); font-size:15px; margin:0 0 8px 0; line-height:1.4; color:white;">${line}</div>`;
             }
@@ -136,13 +167,13 @@ function renderSectionBody(sec, steps) {
         }
         const chordsLine = transposedChords.join('   ');
         return `
-            <div class="cb-chords-line">${chordsLine || 'Instrumental'}</div>
-            ${sec.lyrics ? `<div class="cb-lyrics-line">${sec.lyrics.replace(/\n/g, '<br>')}</div>` : ''}
+            <div class="cb-chords-line" style="font-size:16px; color:var(--accent-blue); font-weight:800;">${chordsLine || 'Instrumental'}</div>
+            ${sec.lyrics ? `<div class="cb-lyrics-line" style="font-size:15px; color:white;">${sec.lyrics.replace(/\n/g, '<br>')}</div>` : ''}
         `;
     }
 }
 
-// Renderizar el cifrado completo con soporte de transposición
+// Renderizar la vista de la canción
 function renderChart() {
     if (!selectedSong) return;
     const panel = document.getElementById("viewerPanel");
@@ -156,11 +187,30 @@ function renderChart() {
     const songArtist = selectedSong.artist || 'Artista Desconocido';
 
     let html = `
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid var(--border-color); padding-bottom:20px; margin-bottom:24px; flex-wrap: wrap; gap: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom:1px solid var(--border-color); padding-bottom:20px; margin-bottom:20px; flex-wrap: wrap; gap: 20px;">
             <div>
-                <h1 style="font-size:38px; font-family:var(--font-title); font-weight:900; margin:0 0 6px 0; letter-spacing:-0.5px; text-shadow: 0 0 15px rgba(255,255,255,0.1);">${songTitle}</h1>
-                <p style="font-size:16px; font-weight:700; color:var(--accent-blue); margin:0;">${songArtist}</p>
+                <h1 style="font-size:36px; font-family:var(--font-title); font-weight:900; margin:0 0 6px 0; letter-spacing:-0.5px; text-shadow: 0 0 15px rgba(255,255,255,0.1); color:white;">${songTitle}</h1>
+                <p style="font-size:15px; font-weight:700; color:var(--accent-blue); margin:0 0 12px 0;">${songArtist}</p>
+                
+                <!-- SELECTOR MODO PRODUCCIÓN (PURA LETRA) VS MODO BANDA (CON ACORDES) -->
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <button 
+                        type="button"
+                        onclick="setChordsMode(false)"
+                        style="padding:7px 14px; font-size:11px; font-weight:800; border-radius:8px; cursor:pointer; border:1px solid var(--accent-purple); background:${!showChordsMode ? 'var(--accent-purple)' : 'rgba(255,255,255,0.04)'}; color:${!showChordsMode ? '#000000' : '#ffffff'}; transition:all 0.2s ease;"
+                    >
+                        📄 PURA LETRA (PRODUCCIÓN)
+                    </button>
+                    <button 
+                        type="button"
+                        onclick="setChordsMode(true)"
+                        style="padding:7px 14px; font-size:11px; font-weight:800; border-radius:8px; cursor:pointer; border:1px solid var(--border-color); background:${showChordsMode ? 'var(--accent-blue)' : 'rgba(255,255,255,0.04)'}; color:${showChordsMode ? '#000000' : '#ffffff'}; transition:all 0.2s ease;"
+                    >
+                        🎸 CON ACORDES (BANDA)
+                    </button>
+                </div>
             </div>
+
             <div style="text-align:right;">
                 <div style="display:flex; gap:10px; margin-bottom:12px; justify-content:flex-end; flex-wrap:wrap;">
                     <span class="status-pill pending" style="border-radius:10px; font-weight:800; padding:6px 12px;">BPM: ${selectedSong.tempo || '--'}</span>
@@ -174,7 +224,8 @@ function renderChart() {
             </div>
         </div>
 
-        <!-- Módulo Soundboard Mixer (Consola de Transposición) -->
+        ${showChordsMode ? `
+        <!-- Módulo Soundboard Mixer (Consola de Transposición - Solo Visible en Modo Banda) -->
         <div class="mixer-controls animate-fade">
             <div style="display:flex; align-items:center; gap:15px;">
                 <div style="background:var(--accent-red-trans); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px;">🎛️</div>
@@ -194,25 +245,25 @@ function renderChart() {
                 ${currentTransposeSteps !== 0 ? `<button class="danger" onclick="resetTranspose()" style="padding:8px 12px; font-size:10px; border-radius:8px; height:36px; margin-left:5px;">RESTABLECER</button>` : ''}
             </div>
         </div>
+        ` : ''}
         
         <div class="chords-render-zone">
     `;
 
-    // Normalizar sections: puede ser string (datos corruptos) o undefined
     const sections = Array.isArray(selectedSong.sections) ? selectedSong.sections : [];
 
     if (sections.length > 0) {
         sections.forEach(sec => {
-            if (!sec || typeof sec !== 'object') return; // saltar entradas corruptas
+            if (!sec || typeof sec !== 'object') return;
             html += `
-                <div class="cb-section-block animate-fade">
-                    <div class="cb-section-header">${sec.name || 'Sección'}</div>
-                    ${renderSectionBody(sec, currentTransposeSteps)}
+                <div class="cb-section-block animate-fade" style="margin-bottom:18px;">
+                    <div class="cb-section-header" style="font-size:13px; font-weight:900; letter-spacing:1px;">${sec.name || 'Sección'}</div>
+                    ${renderSectionBody(sec, currentTransposeSteps, showChordsMode)}
                 </div>
             `;
         });
     } else {
-        html += `<p style="color:var(--text-muted); text-align:center; padding:40px;">Esta canción no tiene cifrados ni acordes capturados aún.<br><small style="font-size:11px;">Usa el editor para agregar secciones y acordes.</small></p>`;
+        html += `<p style="color:var(--text-muted); text-align:center; padding:40px;">Esta canción no tiene contenido cargado aún.<br><small style="font-size:11px;">Usa el editor para agregar secciones y letra.</small></p>`;
     }
 
     html += `</div>`;
